@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+//Accounting
+model Account {
+  id           String        @id @default(uuid())
+  name         String
+  number       String
+  type  AccountType
+  balance      Float         @default(0.0)
+  status       AccountStatus @default(ACTIVE)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[] // Relations to transactions
+  parentAccount    Account? @relation("SubAccounts", fields: [parentAccountId], references: [id]) // Parent account (for hierarchy)
+  parentAccountId  String?  // Changed from Int? to String?
+  subAccounts      Account[] @relation("SubAccounts")  
+  // Foreign key relation to JournalEntries
+  journalEntries JournalEntry[]
+}
+
+model JournalEntry {
+  id          String   @id @default(uuid())
+  description String
+  date        DateTime @default(now())
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  transactions  Transaction[] // Each journal entry has multiple transactions (debits/credits)
+  createdByUser User          @relation(fields: [createdBy], references: [id])
+  periodId      String?
+  period        Period?       @relation(fields: [periodId], references: [id])
+  account       Account?      @relation(fields: [accountId], references: [id])
+  accountId     String?
+}
+
+model Transaction {
+  id        String          @id @default(uuid())
+  amount    Float
+  type      TransactionType
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  // Foreign key relations
+  accountId      String // Reference to an account
+  journalEntryId String // Reference to a journal entry
+
+  // Relations
+  account      Account      @relation(fields: [accountId], references: [id])
+  journalEntry JournalEntry @relation(fields: [journalEntryId], references: [id])
+}
+
+model Period {
+  id        String   @id @default(uuid())
+  startDate DateTime
+  endDate   DateTime
+  isClosed  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  journalEntries JournalEntry[] // Journal entries that are part of this period
+}
+
+// model User {
+//   id        String      @id @default(autoincrement())
+//   name      String
+//   email     String   @unique
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+
+//   // Relations
+//   journalEntries JournalEntry[] // Journal entries created by the user
+// }
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum TransactionType {
+  DEBIT
+  CREDIT
+}
+
+//Old
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  users     User[]   @relation("WorkspaceUsers")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id             String         @id @default(cuid())
+  email          String         @unique
+  password       String
+  name           String
+  imgUrl         String
+  role           UserRole
+  workspaces     Workspace[]    @relation("WorkspaceUsers") // Relation to multiple workspaces
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  journalEntries JournalEntry[]
+}
+
+enum UserRole {
+  ADMIN
+  STAFF
+  ACCOUNTANT
+  VIEWER
+}
