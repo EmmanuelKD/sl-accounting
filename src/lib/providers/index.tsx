@@ -7,7 +7,7 @@ import { AppRouterCacheProvider } from "@mui/material-nextjs/v14-appRouter";
 import { SessionProvider } from "next-auth/react";
 import dynamic from "next/dynamic";
 import { createTheme } from "@/theme";
-import { ThemeProvider } from "@mui/material";
+import { CssBaseline, ThemeProvider } from "@mui/material";
 import { SettingsConsumer } from "@/context/settings-context";
 
 const ProgressBar = dynamic(() => import("@/components/progress-bar"), {
@@ -38,6 +38,7 @@ export default function Providers({ children }: { children: ReactNode }) {
         return (
           <AppRouterCacheProvider>
             <ThemeProvider theme={theme}>
+              <CssBaseline/>
               <SessionProvider>
                 <QueryClientProvider client={queryClient as QueryClient}>
                   <Toaster position={"top-center"} />

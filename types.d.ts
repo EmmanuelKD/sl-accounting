@@ -245,12 +245,7 @@ let ExpensesCategory = [
   },
 ];
 
-enum TransactionType {
-  income = "Income",
-  Expenses = "Expenses",
-  PettyCash_Income = "PettyCash_Income",
-  PettyCash_Expenses = "PettyCash_Expenses",
-}
+ 
 
 interface ProjectType {
   id: string;

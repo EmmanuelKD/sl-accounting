@@ -1,7 +1,15 @@
-import React from 'react';
+import { Metadata } from 'next'
+import { fetchTrialBalanceData } from './to-delete'
+import TrialBalanceContent from './trial-balance-main'
+ 
 
-const Page = () => {
-  return <div>dash/accounting/general-ledger/trial-balance</div>;
-};
+export const metadata: Metadata = {
+  title: 'Trial Balance | Accounting System',
+  description: 'View and analyze the trial balance for your accounting period.',
+}
 
-export default Page;
+export default async function TrialBalancePage() {
+  const initialData = await fetchTrialBalanceData()
+
+  return <TrialBalanceContent initialData={initialData} />
+}

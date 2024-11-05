@@ -62,7 +62,8 @@ export const paths = {
     },
     hr: {
       index: "/dash/hr",
-      employee_profiles: "/dash/hr/employee-profiles",
+      employees: "/dash/hr/employees",
+      departments_and_roles: "/dash/hr/departments-and-roles",
       benefits_management: "/dash/hr/benefits-management",
       communication_collaboration: "/dash/hr/communication-collaboration",
     },

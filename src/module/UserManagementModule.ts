@@ -1,14 +1,17 @@
-import { User } from "@prisma/client";
+import { User, UserRole, Workspace } from "@prisma/client";
 import bcrypt from "bcrypt-edge";
 import jwt from "jsonwebtoken";
-import otpGenerator from "otp-generator";
+// import otpGenerator from "otp-generator";
 import { prisma } from "@/db";
-import { sendOTPEmail, sendResetPasswordEmail } from "@/utils/email";
+import {
+  // sendOTPEmail,
+  sendResetPasswordEmail,
+} from "@/utils/email";
 import { HttpError } from "@/utils/errorHandler";
 
-type UserDTO = Omit<User, "id" | "createdAt" | "updatedAt">;
+type UserDTO = Omit<User, "createdAt" | "updatedAt">;
 export default class UserManagementModule {
-  registerUser = async (user: UserDTO, workspaces: string[]) => {
+  registerUser = async (user: UserDTO, workspaces: Workspace[]) => {
     const userEmail = user.email;
 
     // Create user in the database
@@ -25,12 +28,12 @@ export default class UserManagementModule {
       });
     }
 
-    const otp = otpGenerator.generate(6, {
-      upperCaseAlphabets: false,
-      specialChars: false,
-      lowerCaseAlphabets: false,
-      digits: true,
-    });
+    // const otp = otpGenerator.generate(6, {
+    //   upperCaseAlphabets: false,
+    //   specialChars: false,
+    //   lowerCaseAlphabets: false,
+    //   digits: true,
+    // });
     // save hash password
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(user.password, salt);
@@ -45,7 +48,7 @@ export default class UserManagementModule {
         password: hash,
         role: Boolean(UserCount) ? user.role : "ADMIN",
         workspaces: {
-          connect: workspaces.map((workspaceId) => ({ id: workspaceId })),
+          connect: workspaces.map((workspace) => ({ id: workspace.id })),
         },
       },
     });
@@ -64,7 +67,7 @@ export default class UserManagementModule {
       }
     );
     // Path to the HTML file
-    await sendOTPEmail(otp, createdUser.email);
+    // await sendOTPEmail(otp, createdUser.email);
 
     return {
       code: 201,
@@ -79,6 +82,19 @@ export default class UserManagementModule {
         token,
       },
     };
+  };
+
+  deleteUser = async (id: string) => {
+    await prisma.user.delete({
+      where: { id },
+    });
+  };
+  getUsers = async () => {
+    return await prisma.user.findMany({
+      include: {
+        workspaces: true,
+      },
+    });
   };
 
   updateUserPassword = async (uid: string, password: string) => {
@@ -130,21 +146,21 @@ export default class UserManagementModule {
     uid: string,
     name?: string,
     email?: string,
-    phone?: string
+    role?: UserRole,
+    workspaces?: Workspace[]
   ) => {
     try {
-      const otp = otpGenerator.generate(6, {
-        upperCaseAlphabets: false,
-        specialChars: false,
-        lowerCaseAlphabets: false,
-        digits: true,
-      });
       const updatedUser = await prisma.user.update({
         where: { id: uid },
         data: {
           ...(name && { name }),
-          ...(phone && { phone }),
-          ...(Boolean(email) && { email, otp }),
+          ...(role && { role }),
+          ...(Boolean(email) && { email }),
+          ...(workspaces && {
+            workspaces: {
+              connect: workspaces.map((workspace) => ({ id: workspace.id })),
+            },
+          }),
         },
       });
 

@@ -9,20 +9,22 @@ datasource db {
 
 //Accounting
 model Account {
-  id           String        @id @default(uuid())
-  name         String
-  number       String
-  type  AccountType
-  balance      Float         @default(0.0)
-  status       AccountStatus @default(ACTIVE)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  transactions Transaction[] // Relations to transactions
-  parentAccount    Account? @relation("SubAccounts", fields: [parentAccountId], references: [id]) // Parent account (for hierarchy)
-  parentAccountId  String?  // Changed from Int? to String?
-  subAccounts      Account[] @relation("SubAccounts")  
-  // Foreign key relation to JournalEntries
-  journalEntries JournalEntry[]
+  id              String          @id @default(uuid())
+  name            String
+  number          String
+  type            AccountType
+  balance         Float           @default(0.0)
+  status          AccountStatus   @default(ACTIVE)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  transactions    Transaction[]
+  parentAccount   Account?        @relation("SubAccounts", fields: [parentAccountId], references: [id])
+  parentAccountId String?
+  subAccounts     Account[]       @relation("SubAccounts")
+  // journalEntries  JournalEntry[]
+  workspace       Workspace       @relation(fields: [workspaceId], references: [id])
+  workspaceId     String
+  Reimbursement   Reimbursement[]
 }
 
 model JournalEntry {
@@ -33,53 +35,46 @@ model JournalEntry {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Relations
-  transactions  Transaction[] // Each journal entry has multiple transactions (debits/credits)
-  createdByUser User          @relation(fields: [createdBy], references: [id])
+  transactions  Transaction[]
+  createdByUser User            @relation(fields: [createdBy], references: [id])
   periodId      String?
-  period        Period?       @relation(fields: [periodId], references: [id])
-  account       Account?      @relation(fields: [accountId], references: [id])
-  accountId     String?
+  period        Period?         @relation(fields: [periodId], references: [id])
+  // account       Account?        @relation(fields: [accountId], references: [id])
+  // accountId     String?
+  workspace     Workspace       @relation(fields: [workspaceId], references: [id])
+  workspaceId   String
+  Reimbursement Reimbursement[] // this is a another form of transactino but is more cartigorized
 }
 
+//same as LineItem
 model Transaction {
-  id        String          @id @default(uuid())
-  amount    Float
-  type      TransactionType
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-
-  // Foreign key relations
-  accountId      String // Reference to an account
-  journalEntryId String // Reference to a journal entry
-
-  // Relations
-  account      Account      @relation(fields: [accountId], references: [id])
-  journalEntry JournalEntry @relation(fields: [journalEntryId], references: [id])
+  id                   String          @id @default(uuid())
+  amount               Float
+  type                 TransactionType
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  accountId            String
+  note                 String
+  relatedTransactionId String?         @unique // Optional field for related transaction
+  account              Account         @relation(fields: [accountId], references: [id])
+  journalEntry         JournalEntry    @relation(fields: [journalEntryId], references: [id])
+  journalEntryId       String
+  workspace            Workspace       @relation(fields: [workspaceId], references: [id])
+  workspaceId          String
 }
 
 model Period {
-  id        String   @id @default(uuid())
-  startDate DateTime
-  endDate   DateTime
-  isClosed  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  id             String         @id @default(uuid())
+  startDate      DateTime
+  endDate        DateTime
+  isClosed       Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  workspace      Workspace      @relation(fields: [workspaceId], references: [id])
+  workspaceId    String
   // Relations
   journalEntries JournalEntry[] // Journal entries that are part of this period
 }
-
-// model User {
-//   id        String      @id @default(autoincrement())
-//   name      String
-//   email     String   @unique
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-
-//   // Relations
-//   journalEntries JournalEntry[] // Journal entries created by the user
-// }
 
 enum AccountType {
   ASSET
@@ -99,26 +94,74 @@ enum TransactionType {
   CREDIT
 }
 
+model Reimbursement {
+  id             String              @id @default(uuid())
+  description    String
+  amount         Float
+  date           DateTime            @default(now())
+  status         ReimbursementStatus @default(PENDING) // Possible values: PENDING, APPROVED, REJECTED
+  createdBy      String
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  journalEntry   JournalEntry?       @relation(fields: [journalEntryId], references: [id])
+  journalEntryId String?
+  // Relations
+  workspaceId    String
+  account        Account             @relation(fields: [accountId], references: [id])
+  accountId      String
+  Workspace      Workspace           @relation(fields: [workspaceId], references: [id])
+  User           User?               @relation(fields: [userId], references: [id])
+  userId         String?
+}
+
+enum ReimbursementStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 //Old
 model Workspace {
-  id        String   @id @default(cuid())
-  name      String
-  users     User[]   @relation("WorkspaceUsers")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String               @id @default(cuid())
+  name               String
+  users              User[]               @relation("WorkspaceUsers")
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  accounts           Account[]
+  journalEntries     JournalEntry[]
+  transactions       Transaction[]
+  Period             Period[]
+  Reimbursement      Reimbursement[]
+  Customer           Customer[]
+  AccountsReceivable AccountsReceivable[]
+  Vendor             Vendor[]
+  Payment            Payment[]
+  Invoice            Invoice[]
+  Employee           Employee[]
+  Salary             Salary[]
+  PayrollItem        PayrollItem[]
+  TaxBracket         TaxBracket[]
+  Deduction          Deduction[]
+  Leave              Leave[]
+  Department         Department[]
+  Role               Role[]
+  RoleHistory        RoleHistory[]
+  UploadFile         UploadFile[]
+  Benefit            Benefit[]
 }
 
 model User {
-  id             String         @id @default(cuid())
-  email          String         @unique
+  id             String          @id @default(cuid())
+  email          String          @unique
   password       String
   name           String
   imgUrl         String
   role           UserRole
-  workspaces     Workspace[]    @relation("WorkspaceUsers") // Relation to multiple workspaces
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  workspaces     Workspace[]     @relation("WorkspaceUsers") // Relation to multiple workspaces
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
   journalEntries JournalEntry[]
+  Reimbursement  Reimbursement[]
 }
 
 enum UserRole {
@@ -126,4 +169,388 @@ enum UserRole {
   STAFF
   ACCOUNTANT
   VIEWER
+}
+
+/// new 
+
+model Customer {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  workspaceId String
+
+  // Relationship to AR and Invoices
+  accountsReceivable AccountsReceivable[]
+  invoices           Invoice[]
+  payments           Payment[]
+}
+
+model AccountsReceivable {
+  id             String          @id @default(uuid())
+  balance        Float           @default(0.0) // Tracks the total outstanding balance
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  customerId     String
+  customer       Customer        @relation(fields: [customerId], references: [id])
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id])
+  workspaceId    String
+  // Optional relation to detailed entries for transactions on AR
+  arTransactions ARTransaction[]
+  Invoice        Invoice[]
+  Payment        Payment[]
+}
+
+model Invoice {
+  id          String        @id @default(uuid())
+  totalAmount Float
+  status      InvoiceStatus // Enum for status: PENDING, PAID, OVERDUE, etc.
+  dueDate     DateTime
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  customerId  String
+  customer    Customer      @relation(fields: [customerId], references: [id])
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  workspaceId String
+  // Relationship to Payments
+  payments    Payment[]
+
+  // Relation to Accounts Receivable
+  accountsReceivableId String?
+  accountsReceivable   AccountsReceivable? @relation(fields: [accountsReceivableId], references: [id])
+  Vendor               Vendor?             @relation(fields: [vendorId], references: [id])
+  vendorId             String?
+}
+
+model Payment {
+  id         String        @id @default(uuid())
+  amount     Float
+  date       DateTime      @default(now())
+  method     PaymentMethod // Enum: CASH, CREDIT_CARD, BANK_TRANSFER, etc.
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  customerId String
+  customer   Customer      @relation(fields: [customerId], references: [id])
+
+  workspace            Workspace           @relation(fields: [workspaceId], references: [id])
+  workspaceId          String
+  // Relation to Accounts Receivable and Invoice
+  invoiceId            String?
+  invoice              Invoice?            @relation(fields: [invoiceId], references: [id])
+  accountsReceivableId String?
+  accountsReceivable   AccountsReceivable? @relation(fields: [accountsReceivableId], references: [id])
+  Vendor               Vendor?             @relation(fields: [vendorId], references: [id])
+  vendorId             String?
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum PaymentMethod {
+  CASH
+  CREDIT_CARD
+  BANK_TRANSFER
+}
+
+model ARTransaction {
+  id                   String             @id @default(uuid())
+  type                 ARTransactionType // PAYMENT, INVOICE, REFUND, ADJUSTMENT
+  amount               Float // Amount that affects the AR
+  transactionDate      DateTime           @default(now())
+  description          String? // Optional description
+  accountsReceivableId String // Link to the associated AR
+  accountsReceivable   AccountsReceivable @relation(fields: [accountsReceivableId], references: [id])
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+}
+
+enum ARTransactionType {
+  INVOICE // When an invoice is issued
+  PAYMENT // When a payment is made
+  REFUND // When a refund is issued
+  ADJUSTMENT // When an adjustment (credit/debit) is made
+}
+
+model Vendor {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  phone         String?
+  address       String?
+  contactPerson String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  invoices      Invoice[]
+  payments      Payment[]
+  workspace     Workspace @relation(fields: [workspaceId], references: [id])
+  workspaceId   String
+}
+
+// for payroll
+
+model Employee {
+  id                 String           @id @default(uuid())
+  firstName          String
+  lastName           String
+  email              String           @unique
+  phone              String?
+  NRA_Tin_Number     String?
+  NIN_Number         String?
+  maritalStatus      MaritalStatus
+  contactPersonName  String           @default("")
+  contactPersonPhone String           @default("")
+  // position         String
+  department         String?
+  startDate          DateTime
+  salary             Salary?
+  payrollItems       PayrollItem[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  Deduction          Deduction[]
+  Leave              Leave[]
+  workspace          Workspace        @relation(fields: [workspaceId], references: [id])
+  workspaceId        String
+  Department         Department?      @relation(fields: [departmentId], references: [id])
+  departmentId       String?
+  Role               Role?            @relation(fields: [roleId], references: [id])
+  roleId             String?
+  phoneNumber        String?
+  dateOfBirth        DateTime
+  // hireDate         DateTime
+  address            String?
+  employmentStatus   EmploymentStatus
+  Benefit            Benefit[]
+  SalaryHistory      SalaryHistory[]
+  BenefitHistory     BenefitHistory[]
+  RoleHistory        RoleHistory[]
+  UploadFile         UploadFile[]
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+  WIDOWED
+}
+
+model Salary {
+  id                    String        @id @default(uuid())
+  employeeId            String        @unique
+  employee              Employee      @relation(fields: [employeeId], references: [id])
+  basicSalary           Float
+  // allowances            Float
+  deductionsBeforTax    Float         @default(0)
+  deductionsAfterTax    Float         @default(0)
+  bonusBeforTax    Float         @default(0)
+  bonusAfterTax    Float         @default(0)
+  tax                   Float
+  NASSIT                Float // tax
+  salaryCalculationJson Json?
+  netSalary             Float
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  PayrollItem           PayrollItem[]
+  workspace             Workspace     @relation(fields: [workspaceId], references: [id])
+  workspaceId           String
+}
+
+model SalaryHistory {
+  id                    String   @id @default(uuid())
+  employeeId            String
+  employee              Employee @relation(fields: [employeeId], references: [id])
+  baseSalary            Float
+  salaryCalculationJson Json
+  lastEffectiveDate     DateTime @default(now())
+  notes                 String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([employeeId])
+}
+
+model PayrollItem {
+  id          String      @id @default(uuid())
+  employeeId  String
+  employee    Employee    @relation(fields: [employeeId], references: [id])
+  salaryId    String
+  salary      Salary      @relation(fields: [salaryId], references: [id])
+  month       Int // 1-12 for January-December
+  year        Int // Year of the payroll
+  totalPaid   Float
+  paymentDate DateTime    @default(now())
+  paymentMode PaymentMode
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id])
+  workspaceId String
+}
+
+model TaxBracket {
+  id            String    @id @default(uuid())
+  description   String
+  lowerLimit    Float
+  upperLimit    Float
+  taxPercentage Float
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  workspace     Workspace @relation(fields: [workspaceId], references: [id])
+  workspaceId   String
+}
+
+model Deduction {
+  id          String    @id @default(uuid())
+  name        String
+  startDate   DateTime  @default(now())
+  endDate     DateTime?
+  isTaxExempt Boolean
+  description String?
+  amount      Float
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  workspaceId String
+}
+
+enum PaymentMode {
+  BANK_TRANSFER
+  CASH
+  CHEQUE
+  MOBILE_PAYMENT
+}
+
+model Leave {
+  id          String      @id @default(uuid())
+  employeeId  String
+  employee    Employee    @relation(fields: [employeeId], references: [id])
+  leaveType   LeaveType   @default(PAID) // Enum to define the type of leave (e.g., Paid, Unpaid)
+  startDate   DateTime
+  endDate     DateTime
+  reason      String?
+  status      LeaveStatus @default(PENDING) // Enum to define approval status (e.g., Pending, Approved)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id])
+  workspaceId String
+
+  @@index([employeeId])
+}
+
+enum LeaveType {
+  PAID
+  UNPAID
+  SICK
+  MATERNITY
+  PATERNITY
+  VACATION
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+//// HR management
+
+model Department {
+  id   String @id @default(uuid())
+  name String
+
+  employees   Employee[]
+  Role        Role[]
+  description String?
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id])
+  workspaceId String
+  RoleHistory RoleHistory[]
+}
+
+model Role {
+  id           String      @id @default(uuid())
+  title        String
+  level        Int         @default(1)
+  employees    Employee[]
+  department   Department? @relation(fields: [departmentId], references: [id])
+  departmentId String?
+  workspace    Workspace   @relation(fields: [workspaceId], references: [id])
+  workspaceId  String
+}
+
+model RoleHistory {
+  id           String      @id @default(uuid())
+  title        String
+  level        Int         @default(1)
+  employees    Employee[]
+  department   Department? @relation(fields: [departmentId], references: [id])
+  departmentId String?
+  workspace    Workspace   @relation(fields: [workspaceId], references: [id])
+  workspaceId  String
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  INACTIVE
+  TERMINATED
+  ON_LEAVE
+}
+
+model Benefit {
+  id                     String      @id @default(uuid())
+  employeeId             String
+  type                   BenefitType
+  workspace              Workspace   @relation(fields: [workspaceId], references: [id])
+  workspaceId            String
+  description            String?
+  benefitCalculationJson Json?
+  value                  Float // Monetary value or estimated worth of the benefit
+  effectiveDate          DateTime // Date when the benefit becomes active
+  endDate                DateTime? // Optional end date if the benefit is temporary
+  isTaxable              Boolean // Whether the benefit is taxable
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+  Employee               Employee    @relation(fields: [employeeId], references: [id])
+}
+
+model BenefitHistory {
+  id                     String   @id @default(uuid())
+  employeeId             String
+  employee               Employee @relation(fields: [employeeId], references: [id])
+  value                  Float
+  benefitCalculationJson Json
+  lastEffectiveDate      DateTime @default(now())
+  notes                  String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([employeeId])
+}
+
+enum BenefitType {
+  HEALTH_INSURANCE
+  RETIREMENT_PLAN
+  PTO //Paid Time Off
+  BONUS
+  ALLOWANCE
+  EDUCATIONAL_ASSISTANCE
+  OTHER
+}
+
+model UploadFile {
+  id          String    @id @default(uuid())
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id])
+  name        String
+  url         String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  workspaceId String
 }

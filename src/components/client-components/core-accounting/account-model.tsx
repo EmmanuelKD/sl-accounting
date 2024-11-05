@@ -1,8 +1,5 @@
+"use client";
 import { ERROR_MESSAGE } from "@/const";
-import {
-  createAccountAction,
-  updateAccountAction,
-} from "@/lib/actions/core-accounting/account-actions";
 import { HttpError } from "@/utils/errorHandler";
 import {
   Button,
@@ -18,7 +15,6 @@ import {
   Switch,
   TextField,
 } from "@mui/material";
-import { AccountType } from "@prisma/client";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { AccountMinimal } from "types";
@@ -38,6 +34,9 @@ export default function AccountModal({
   account,
   accounts,
 }: AccountModalProps) {
+
+  // @todo work onusers workspace
+  const workspaceId = "cm2el4sot0002nhcysia1pnfu";
   const [formData, setFormData] = useState<AccountMinimal>({
     id: "",
     number: "",
@@ -46,6 +45,7 @@ export default function AccountModal({
     balance: 0,
     status: "ACTIVE",
     parentAccountId: "",
+    workspaceId: workspaceId,
   });
 
   useEffect(() => {
@@ -60,6 +60,7 @@ export default function AccountModal({
         balance: 0,
         status: "ACTIVE",
         parentAccountId: "",
+        workspaceId: workspaceId,
       });
     }
   }, [account]);
@@ -81,18 +82,7 @@ export default function AccountModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (account) {
-        const result = await updateAccountAction(account.id, formData as any);
-        onSave(result.account as AccountMinimal);
-      } else {
-        const result = await createAccountAction({
-          name: formData.name as string,
-          number: formData.number as string,
-          type: formData.type as AccountType,
-          parentAccountId: formData.parentAccountId as string,
-        });
-        onSave(result.account as AccountMinimal);
-      }
+      onSave(formData as AccountMinimal);
     } catch (error) {
       if (error instanceof HttpError) {
         toast.error(`${error.message}`);

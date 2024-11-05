@@ -1,7 +1,8 @@
-import React from 'react';
+import PayrollManagement from "./payroll-management";
 
-const Page = () => {
-  return <div>dash/accounting/payroll</div>;
-};
 
-export default Page;
+
+
+export default function PayrollPage() {
+  return <PayrollManagement />
+}

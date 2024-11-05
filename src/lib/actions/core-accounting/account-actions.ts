@@ -6,7 +6,8 @@ import {
   updateAccount,
   deleteAccount,
   calculateAccountBalance,
-} from "@/module/CoreAccounting"; // Path to the service layer
+  getAccounts,
+} from "@/module/CoreAccountingModule"; // Path to the service layer
 import { AccountType } from "@prisma/client";
 
 // Server action to create an account
@@ -15,6 +16,8 @@ export async function createAccountAction(data: {
   number: string;
   type: AccountType;
   parentAccountId?: string;
+  workspaceId: string;
+  balance?: number;
 }) {
   const account = await createAccount(data);
   return { account };
@@ -29,6 +32,12 @@ export async function getAccountByIdAction(accountId: string) {
   return { account };
 }
 
+// Server action to get all accounts
+export async function getAccountsAction() {
+  const accounts = await getAccounts();
+  return { accounts };
+}
+
 // Server action to update an account
 export async function updateAccountAction(
   accountId: string,
@@ -37,6 +46,8 @@ export async function updateAccountAction(
     number?: string;
     type?: AccountType;
     parentAccountId?: string;
+    workspaceId?: string;
+    balance?: number;
   }
 ) {
   const account = await updateAccount(accountId, data);

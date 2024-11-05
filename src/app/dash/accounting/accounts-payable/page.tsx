@@ -1,7 +1,19 @@
-import React from 'react';
 
-const Page = () => {
-  return <div>dash/accounting/accounts-payable</div>;
-};
 
-export default Page;
+
+import AccountsPayableContent from './account-payable-content'
+import { fetchInvoices } from './to-delete'
+
+
+export default async function AccountsPayablePage() {
+  const { invoices, totalPayable, overduePayable } = await fetchInvoices()
+
+  return (
+    <AccountsPayableContent
+
+      initialInvoices={invoices}
+      totalPayable={totalPayable}
+      overduePayable={overduePayable}
+    />
+  )
+}

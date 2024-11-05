@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE `Salary` ADD COLUMN `bonusAfterTax` DOUBLE NOT NULL DEFAULT 0,
+    ADD COLUMN `bonusBeforTax` DOUBLE NOT NULL DEFAULT 0,
+    ADD COLUMN `deductionsAfterTax` DOUBLE NOT NULL DEFAULT 0,
+    ADD COLUMN `deductionsBeforTax` DOUBLE NOT NULL DEFAULT 0;

@@ -29,6 +29,11 @@ export const items = [
       </SvgIcon>
     ),
     items: [
+      
+      {
+        title: "General Ledger",
+        path: paths.dashboard.accounting.general_ledger.index,
+      },
       {
         title: "Accounts Receivable",
         path: paths.dashboard.accounting.accounts_receivable.index,
@@ -40,6 +45,10 @@ export const items = [
       {
         title: "Financial Statements",
         path: paths.dashboard.accounting.financial_statements.index,
+      },
+      {
+        title: "Payroll",
+        path: paths.dashboard.accounting.payroll.index,
       },
       {
         title: "Budgeting and Forecasting",
@@ -62,13 +71,13 @@ export const items = [
     ),
     items: [
       {
-        title: "Employee Profiles",
-        path: paths.dashboard.hr.employee_profiles,
+        title: "Employees",
+        path: paths.dashboard.hr.employees,
       },
-      {
-        title: "Benefits Management",
-        path: paths.dashboard.hr.benefits_management,
-      },
+      // {
+      //   title: "Benefits Management",
+      //   path: paths.dashboard.hr.benefits_management,
+      // },
       {
         title: "Communication & Collaboration",
         path: paths.dashboard.hr.communication_collaboration,
@@ -76,25 +85,25 @@ export const items = [
     ],
   },
   // Construction
-  {
-    title: "Construction Management",
-    path: paths.dashboard.construction.index,
-    icon: (
-      <SvgIcon>
-        <Work />
-      </SvgIcon>
-    ),
-    items: [
-      {
-        title: "Building Site Management",
-        path: paths.dashboard.construction.building_site_management.index,
-      },
-      {
-        title: "Project Tracking",
-        path: paths.dashboard.construction.project_tracking.index,
-      },
-    ],
-  },
+  // {
+  //   title: "Construction Management",
+  //   path: paths.dashboard.construction.index,
+  //   icon: (
+  //     <SvgIcon>
+  //       <Work />
+  //     </SvgIcon>
+  //   ),
+  //   items: [
+  //     {
+  //       title: "Building Site Management",
+  //       path: paths.dashboard.construction.building_site_management.index,
+  //     },
+  //     {
+  //       title: "Project Tracking",
+  //       path: paths.dashboard.construction.project_tracking.index,
+  //     },
+  //   ],
+  // },
   {
     title: "Reporting & Analytics",
     path: paths.dashboard.reporting_analytics.index,
