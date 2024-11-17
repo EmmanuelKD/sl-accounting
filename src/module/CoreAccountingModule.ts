@@ -1,34 +1,357 @@
 import {
+  ASSETS_ACCOUNT,
+  CURRENT_ASSETS_ACCOUNT,
+  CASH_AND_CASH_EQUIVALENTS_ACCOUNT,
+  ACCOUNTS_RECEIVABLE_ACCOUNT,
+  INVENTORY_ACCOUNT,
+  RAW_MATERIALS_ACCOUNT,
+  WORK_IN_PROGRESS_ACCOUNT,
+  FINISHED_GOODS_ACCOUNT,
+  FIXED_ASSETS_ACCOUNT,
+  LAND_ACCOUNT,
+  BUILDINGS_ACCOUNT,
+  EQUIPMENT_AND_MACHINERY_ACCOUNT,
+  ACCUMULATED_DEPRECIATION_ACCOUNT,
   REIMBURSEMENT_ACCOUNT_ID,
   REIMBURSEMENT_ACCOUNT_NAME,
   REIMBURSEMENT_ACCOUNT_NUMBER,
   REIMBURSEMENT_ACCOUNT_TYPE,
+  LIABILITIES_ACCOUNT,
+  ACCOUNTS_PAYABLE_ACCOUNT,
+  SHORT_TERM_LOANS_ACCOUNT,
+  LONG_TERM_DEBT_ACCOUNT,
+  EQUITY_ACCOUNT,
+  OWNERS_EQUITY_ACCOUNT,
+  RETAINED_EARNINGS_ACCOUNT,
+  REVENUE_ACCOUNT,
+  SALES_REVENUE_ACCOUNT,
+  SERVICE_REVENUE_ACCOUNT,
+  EXPENSES_ACCOUNT,
+  COST_OF_GOODS_SOLD_ACCOUNT,
+  SALARIES_AND_WAGES_ACCOUNT,
+  UTILITIES_EXPENSE_ACCOUNT,
+  DEPRECIATION_EXPENSE_ACCOUNT,
 } from "@/const";
 import { HttpError } from "@/utils/errorHandler";
 import { calculateTax } from "@/utils/tax-calculatory";
 // import { generateOrderAccount } from "@/utils/generator";
 import {
-  AccountType,
-  PrismaClient,
   AccountStatus,
-  TransactionType,
-  Reimbursement,
-  PaymentMethod,
+  AccountType,
+  Address,
   ARTransactionType,
-  Vendor,
+  Benefit,
+  Deduction,
   Employee,
+  EmploymentStatus,
+  InventoryCategory,
+  InventoryItem,
   // Salary,
   LeaveStatus,
   LeaveType,
-  EmploymentStatus,
   MaritalStatus,
+  PaymentMode,
+  PrismaClient,
+  Reimbursement,
+  TransactionType,
   UploadFile,
-  Benefit,
-  Deduction,
+  Vendor,
 } from "@prisma/client";
-
+import { v4 as uuidv4 } from "uuid";
+import { VendorMetadata } from "types";
 const prisma = new PrismaClient();
 // creating account
+
+export async function createDefaultAccounts(workspaceId: string) {
+  const defaultAccounts = [
+    {
+      name: "Assets",
+      number: ASSETS_ACCOUNT,
+      type: AccountType.ASSET,
+      status: AccountStatus.ACTIVE,
+      balance: 0,
+      workspaceId: workspaceId,
+      subAccounts: {
+        create: [
+          {
+            name: "Current Assets",
+            number: CURRENT_ASSETS_ACCOUNT,
+            type: AccountType.ASSET,
+            status: AccountStatus.ACTIVE,
+            balance: 0,
+            workspaceId: workspaceId,
+            subAccounts: {
+              create: [
+                {
+                  name: "Cash and Cash Equivalents",
+                  number: CASH_AND_CASH_EQUIVALENTS_ACCOUNT,
+                  type: AccountType.ASSET,
+                  balance: 0,
+                  status: AccountStatus.ACTIVE,
+                  workspaceId: workspaceId,
+                },
+                {
+                  name: "Accounts Receivable",
+                  number: ACCOUNTS_RECEIVABLE_ACCOUNT,
+                  type: AccountType.ASSET,
+                  balance: 0,
+                  status: AccountStatus.ACTIVE,
+                  workspaceId: workspaceId,
+                },
+                {
+                  name: "Inventory",
+                  number: INVENTORY_ACCOUNT,
+                  type: AccountType.ASSET,
+                  balance: 0,
+                  status: AccountStatus.ACTIVE,
+                  workspaceId: workspaceId,
+                  subAccounts: {
+                    create: [
+                      {
+                        name: "Raw Materials",
+                        number: RAW_MATERIALS_ACCOUNT,
+                        type: AccountType.ASSET,
+                        balance: 0,
+                        status: AccountStatus.ACTIVE,
+                        workspaceId: workspaceId,
+                      },
+                      {
+                        name: "Work-in-Progress",
+                        number: WORK_IN_PROGRESS_ACCOUNT,
+                        type: AccountType.ASSET,
+                        balance: 0,
+                        status: AccountStatus.ACTIVE,
+                        workspaceId: workspaceId,
+                      },
+                      {
+                        name: "Finished Goods",
+                        number: FINISHED_GOODS_ACCOUNT,
+                        type: AccountType.ASSET,
+                        balance: 0,
+                        status: AccountStatus.ACTIVE,
+                        workspaceId: workspaceId,
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            name: "Fixed Assets",
+            number: FIXED_ASSETS_ACCOUNT,
+            type: AccountType.ASSET,
+            status: AccountStatus.ACTIVE,
+            balance: 0,
+            workspaceId: workspaceId,
+            subAccounts: {
+              create: [
+                {
+                  name: "Land",
+                  number: LAND_ACCOUNT,
+                  type: AccountType.ASSET,
+                  balance: 0,
+                  status: AccountStatus.ACTIVE,
+                  workspaceId: workspaceId,
+                },
+                {
+                  name: "Buildings",
+                  number: BUILDINGS_ACCOUNT,
+                  type: AccountType.ASSET,
+                  balance: 0,
+                  status: AccountStatus.ACTIVE,
+                  workspaceId: workspaceId,
+                },
+                {
+                  name: "Equipment and Machinery",
+                  number: EQUIPMENT_AND_MACHINERY_ACCOUNT,
+                  type: AccountType.ASSET,
+                  balance: 0,
+                  status: AccountStatus.ACTIVE,
+                  workspaceId: workspaceId,
+                },
+                {
+                  name: "Accumulated Depreciation",
+                  number: ACCUMULATED_DEPRECIATION_ACCOUNT,
+                  type: AccountType.CONTRA_ASSET,
+                  balance: 0,
+                  status: AccountStatus.ACTIVE,
+                  workspaceId: workspaceId,
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    // Liabilities and Subaccounts
+    {
+      name: "Liabilities",
+      number: LIABILITIES_ACCOUNT,
+      type: AccountType.LIABILITY,
+      balance: 0,
+      status: AccountStatus.ACTIVE,
+      workspaceId: workspaceId,
+      subAccounts: {
+        create: [
+          {
+            name: "Accounts Payable",
+            number: ACCOUNTS_PAYABLE_ACCOUNT,
+            type: AccountType.LIABILITY,
+            balance: 0,
+            status: AccountStatus.ACTIVE,
+            workspaceId: workspaceId,
+          },
+          {
+            name: "Short-term Loans",
+            number: SHORT_TERM_LOANS_ACCOUNT,
+            type: AccountType.LIABILITY,
+            balance: 0,
+            status: AccountStatus.ACTIVE,
+            workspaceId: workspaceId,
+          },
+          {
+            name: "Long-term Debt",
+            number: LONG_TERM_DEBT_ACCOUNT,
+            type: AccountType.LIABILITY,
+            balance: 0,
+            status: AccountStatus.ACTIVE,
+            workspaceId: workspaceId,
+          },
+        ],
+      },
+    },
+    // Equity and Subaccounts
+    {
+      name: "Equity",
+      number: EQUITY_ACCOUNT,
+      type: AccountType.EQUITY,
+      balance: 0,
+      status: AccountStatus.ACTIVE,
+      workspaceId: workspaceId,
+      subAccounts: {
+        create: [
+          {
+            name: "Owner's Equity",
+            number: OWNERS_EQUITY_ACCOUNT,
+            type: AccountType.EQUITY,
+            balance: 0,
+            status: AccountStatus.ACTIVE,
+            workspaceId: workspaceId,
+          },
+          {
+            name: "Retained Earnings",
+            number: RETAINED_EARNINGS_ACCOUNT,
+            type: AccountType.EQUITY,
+            balance: 0,
+            status: AccountStatus.ACTIVE,
+            workspaceId: workspaceId,
+          },
+        ],
+      },
+    },
+    // Revenue and Subaccounts
+    {
+      name: "Revenue",
+      number: REVENUE_ACCOUNT,
+      type: AccountType.REVENUE,
+      balance: 0,
+      status: AccountStatus.ACTIVE,
+      workspaceId: workspaceId,
+      subAccounts: {
+        create: [
+          {
+            name: "Sales Revenue",
+            number: SALES_REVENUE_ACCOUNT,
+            type: AccountType.REVENUE,
+            balance: 0,
+            status: AccountStatus.ACTIVE,
+            workspaceId: workspaceId,
+          },
+          {
+            name: "Service Revenue",
+            number: SERVICE_REVENUE_ACCOUNT,
+            type: AccountType.REVENUE,
+            balance: 0,
+            status: AccountStatus.ACTIVE,
+            workspaceId: workspaceId,
+          },
+        ],
+      },
+    },
+    // Expenses and Subaccounts
+    {
+      name: "Expenses",
+      number: EXPENSES_ACCOUNT,
+      type: AccountType.EXPENSE,
+      balance: 0,
+      status: AccountStatus.ACTIVE,
+      workspaceId: workspaceId,
+      subAccounts: {
+        create: [
+          {
+            name: "Cost of Goods Sold",
+            number: COST_OF_GOODS_SOLD_ACCOUNT,
+            type: AccountType.EXPENSE,
+            balance: 0,
+            status: AccountStatus.ACTIVE,
+            workspaceId: workspaceId,
+          },
+          {
+            name: "Salaries and Wages",
+            number: SALARIES_AND_WAGES_ACCOUNT,
+            type: AccountType.EXPENSE,
+            balance: 0,
+            status: AccountStatus.ACTIVE,
+            workspaceId: workspaceId,
+          },
+          {
+            name: "Utilities Expense",
+            number: UTILITIES_EXPENSE_ACCOUNT,
+            type: AccountType.EXPENSE,
+            balance: 0,
+            status: AccountStatus.ACTIVE,
+            workspaceId: workspaceId,
+          },
+          {
+            name: "Depreciation Expense",
+            number: DEPRECIATION_EXPENSE_ACCOUNT,
+            type: AccountType.EXPENSE,
+            balance: 0,
+            status: AccountStatus.ACTIVE,
+            workspaceId: workspaceId,
+          },
+        ],
+      },
+    },
+  ];
+
+  try {
+    for (const account of defaultAccounts) {
+      await prisma.account.create({
+        data: account,
+      });
+    }
+    console.log("Default accounts created successfully!");
+  } catch (error) {
+    console.error("Error creating default accounts:", error);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+export const creditAccount = async (accountId: string, amount: number) => {
+  await prisma.account.update({
+    where: { id: accountId },
+    data: { balance: { increment: amount } },
+  });
+};
+export const debitAccount = async (accountId: string, amount: number) => {
+  await prisma.account.update({
+    where: { id: accountId },
+    data: { balance: { decrement: amount } },
+  });
+};
 export const createAccount = async (accountData: {
   name: string;
   number: string;
@@ -586,30 +909,52 @@ export async function createJournalEntry({
     period = await createPeriod(startOfTheMonth, endOfTheMonth, workspaceId);
   }
 
-  const transactionData = transactions.map((t) => {
-    return {
-      id: t.id,
-      amount: t.amount,
-      type: t.type,
-      accountId: t.accountId,
-      workspaceId,
-      note: t.note,
-      relatedTransactionId: t.relatedTransactionId,
-    };
-  });
+  const transactionData = await Promise.all(
+    transactions.map(async (t) => {
+      if (t.type === "CREDIT") {
+        await creditAccount(t.accountId, t.amount);
+      } else {
+        await debitAccount(t.accountId, t.amount);
+      }
+      return {
+        id: t.id,
+        amount: t.amount,
+        type: t.type,
+        accountId: t.accountId,
+        workspaceId,
+        note: t.note,
+        relatedTransactionId: t.relatedTransactionId,
+      };
+    })
+  );
 
-  // Create journal entry and associated transactions
-  const journalEntry = await prisma.journalEntry.create({
-    data: {
-      description,
-      createdBy,
-      workspaceId,
-      periodId: period.id,
-      transactions: {
-        create: transactionData,
+  // Create journal entry and associated transactions in a transaction
+  const journalEntry = await prisma.$transaction(async (prisma) => {
+    const entry = await prisma.journalEntry.create({
+      data: {
+        description,
+        createdBy,
+        workspaceId,
+        periodId: period.id,
+        transactions: {
+          create: transactionData,
+        },
       },
-    },
-    include: { transactions: true },
+      include: { transactions: true },
+    });
+
+    // Only update account balances after successful journal entry creation
+    await Promise.all(
+      transactions.map(async (t) => {
+        if (t.type === "CREDIT") {
+          await creditAccount(t.accountId, t.amount);
+        } else {
+          await debitAccount(t.accountId, t.amount);
+        }
+      })
+    );
+
+    return entry;
   });
 
   return journalEntry;
@@ -654,10 +999,10 @@ export async function getJournalEntries({
         transactions: {
           some: { note: { contains: searchQuery, mode: "insensitive" } },
         },
-      }, // Search within transaction notes
+      },
       {
         createdByUser: { name: { contains: searchQuery, mode: "insensitive" } },
-      }, // Search within createdByUser name
+      },
     ];
   }
 
@@ -913,30 +1258,49 @@ export async function createReimbursementWithJournalEntry({
 // Customer Management
 
 export async function createCustomer(
+  id: string,
   name: string,
   email: string,
   workspaceId: string,
-  phone?: string,
-  address?: string
+  address: Omit<
+    Address,
+    "createdAt" | "updatedAt" | "id" | "customerId" | "vendorId"
+  >[],
+  phone?: string
 ) {
-  return await prisma.customer.create({
+  const customer = await prisma.customer.create({
+    include: {
+      invoices: true,
+      accountsReceivable: true,
+      Address: true,
+      payments: true,
+    },
     data: {
       name,
       email,
       phone,
-      address,
+      Address: {
+        create: address,
+      },
       workspace: {
         connect: { id: workspaceId }, // Assuming you're passing workspaceId contextually
       },
     },
   });
+
+  return customer;
 }
 
-export async function getAllCustomers() {
+export async function getAllCustomers(workspaceId: string) {
   return await prisma.customer.findMany({
+    where: {
+      workspaceId,
+    },
     include: {
+      Address: true,
       accountsReceivable: true,
       invoices: true,
+      payments: true,
     },
   });
 }
@@ -1102,21 +1466,59 @@ export async function getARTransactionsByCustomer(customerId: string) {
 }
 
 // Vendor Management
-export async function addVendor(data: {
-  name: string;
-  email: string;
-  phone?: string;
-  address?: string;
-  contactPerson?: string;
-  workspaceId: string;
-}) {
+export async function addVendor(
+  name: string,
+  email: string,
+  contactPerson: string,
+  workspaceId: string,
+  address: Omit<
+    Address,
+    "createdAt" | "updatedAt" | "id" | "customerId" | "vendorId"
+  >[],
+  phone?: string
+) {
   return await prisma.vendor.create({
-    data,
+    include: {
+      invoices: true,
+      accountsPayable: true,
+      Address: true,
+      payments: true,
+    },
+    data: {
+      name,
+      email,
+      contactPerson,
+      phone,
+      Address: {
+        create: address,
+      },
+      workspace: {
+        connect: { id: workspaceId }, // Assuming you're passing workspaceId contextually
+      },
+    },
   });
 }
 
 export async function getVendors(workspaceId: string) {
   return await prisma.vendor.findMany({
+    include: {
+      invoices: true,
+      payments: true,
+      Address: true,
+      accountsPayable: true,
+    },
+    where: { workspaceId },
+  });
+}
+
+export async function getVendorsMetadata(workspaceId: string) {
+  return await prisma.vendor.findMany({
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+    },
     where: { workspaceId },
   });
 }
@@ -1489,68 +1891,137 @@ export async function recalculateEmployeeSalary(employeeId: string) {
   //   });
 }
 
-//Update Employee Salary
-// export async function updateEmployeeSalary(
-//   salaryId: string,
-//   salaryData: Partial<Salary>
-// ) {
-//   return await prisma.salary.update({
-//     where: { id: salaryId },
-//     data: salaryData,
-//   });
-// }
-
-//Payroll Processing
-
-export async function processEmployeePayroll(
-  employeeId: string,
-  month: number,
-  year: number,
-  workspaceId: string
+// Process Payroll for All Employees
+export async function generatePayroll(
+  workspaceId: string,
+  payrollDate: Date,
+  paymentMode: PaymentMode,
+  excludedEmployees: string[]
 ) {
-  const employee = await prisma.employee.findUnique({
-    where: { id: employeeId },
-    include: { salary: true },
-  });
-
-  if (!employee || !employee.salary) {
-    throw new Error("Employee or salary data not found");
-  }
-
-  const {
-    // basicSalary, allowances, deductions, tax,
-    netSalary,
-  } = employee.salary;
-  const totalPaid = netSalary; // Add logic here if bonuses are calculated separately
-
-  return await prisma.payrollItem.create({
-    data: {
-      workspaceId,
-      employeeId: employee.id,
-      salaryId: employee.salary.id,
-      month,
-      year,
-      totalPaid,
-      paymentMode: "BANK_TRANSFER", // Default or can be parameterized
+  // Fetch all active employees in the specified workspace
+  const employees = await prisma.employee.findMany({
+    where: { workspaceId },
+    include: {
+      salary: true,
+      payrollItems: true,
+      Deduction: true,
+      Benefit: true,
     },
   });
+
+  // Iterate over each employee to calculate payroll
+  const payrollRecords = await Promise.all(
+    employees
+      .filter((employee) => !excludedEmployees.includes(employee.id))
+      .map(async (employee) => {
+        if (!employee.salary) {
+          throw new Error(`Employee ${employee.id} has no salary record.`);
+        }
+
+        // const netSalary =
+        // salaryCalculation.gross -
+        // salaryCalculation.totalTax -
+        // salaryCalculation.nassit;
+
+        const {
+          basicSalary,
+          // deductionsBeforTax,
+          // deductionsAfterTax,
+          // bonusBeforTax,
+          // bonusAfterTax,
+          // tax,
+          // NASSIT,
+        } = employee.salary;
+
+        const preTaxBonus = employee.Benefit.filter(
+          (benefit) => benefit.isTaxable
+        ).reduce((acc, curr) => acc + curr.value, 0);
+
+        const afterTaxBonus = employee.Benefit.filter(
+          (benefit) => !benefit.isTaxable
+        ).reduce((acc, curr) => acc + curr.value, 0);
+
+        const preTaxDeduction = employee.Deduction.filter(
+          (deduction) => !deduction.isTaxExempt
+        ).reduce((acc, curr) => acc + curr.amount, 0);
+
+        const afterTaxDeduction = employee.Deduction.filter(
+          (deduction) => deduction.isTaxExempt
+        ).reduce((acc, curr) => acc + curr.amount, 0);
+
+        // calculating salary after tax
+        const salaryCalculation = calculateTax(
+          employee.salary.basicSalary + preTaxBonus - preTaxDeduction
+        );
+
+        // Calculate total deductions and bonuses
+        const totalDeductions =
+          preTaxDeduction +
+          afterTaxDeduction +
+          salaryCalculation.totalTax +
+          salaryCalculation.nassit;
+
+        const totalBonuses = afterTaxBonus + afterTaxBonus;
+
+        // Calculate net salary
+        const grossSalary = basicSalary + totalBonuses;
+        const netSalary = grossSalary - totalDeductions;
+
+        // Create payroll item record
+        return await prisma.payrollItem.create({
+          data: {
+            employeeId: employee.id,
+            salaryId: employee.salary.id,
+            month: payrollDate.getMonth() + 1,
+            year: payrollDate.getFullYear(),
+            totalPaid: netSalary,
+            paymentDate: payrollDate,
+            basicSalary,
+            grossSalary,
+            netSalary,
+            deductions: totalDeductions,
+            bonuses: totalBonuses,
+            paymentMode,
+            workspaceId,
+          },
+        });
+      })
+  );
+
+  return payrollRecords;
 }
 
-// Process Payroll for All Employees
-export async function processPayrollForAllEmployees(
-  month: number,
-  year: number,
-  workspaceId: string
+export async function getPayroll(
+  workspaceId: string,
+  startDate?: Date,
+  endDate?: Date,
+  departmentId?: string
 ) {
-  const employees = await prisma.employee.findMany({
-    include: { salary: true },
+  const whereClause: any = { workspaceId };
+
+  if (startDate && endDate) {
+    whereClause.date = { gte: startDate, lte: endDate };
+  }
+
+  if (departmentId) {
+    whereClause.employee = { departmentId };
+  }
+
+  const payrollItems = await prisma.payrollItem.findMany({
+    where: whereClause,
+    include: {
+      employee: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          department: true,
+        },
+      },
+    },
   });
 
-  const payrollPromises = employees.map((employee) => {
-    return processEmployeePayroll(employee.id, month, year, workspaceId);
-  });
-
-  return await Promise.all(payrollPromises);
+  return payrollItems;
 }
 
 //  Tax and Deduction Management
@@ -1585,6 +2056,7 @@ export async function addDeduction(
     name: string;
     description?: string;
     amount: number;
+    isTaxExempt: boolean;
   }
 ) {
   return await prisma.deduction.create({
@@ -1774,3 +2246,94 @@ export async function deleteRole(id: string) {
   });
   return deletedRole;
 }
+
+// Invontary
+
+export async function createInventoryItem(
+  data: {
+    inventoryItem: Omit<
+      InventoryItem,
+      "id" | "createdAt" | "updatedAt" | "accountId" | "workspaceId"
+    >;
+
+    vendor: VendorMetadata | null;
+  },
+  workspaceId: string
+) {
+  const accountNumber =
+    ASSETS_ACCOUNT[data.inventoryItem.category as unknown as InventoryCategory];
+
+  const currentAssetAccount = await prisma.account.findFirst({
+    where: { number: accountNumber },
+  });
+
+  if (!currentAssetAccount) {
+    throw new HttpError({
+      code: 404,
+      success: false,
+      message: "Current Asset Account not found",
+    });
+  }
+
+  // first check for current asset account
+  const createdAccount = await prisma.inventoryItem.create({
+    data: {
+      ...data.inventoryItem,
+      accountId: currentAssetAccount.id,
+      workspaceId,
+    },
+  });
+  const totalInventoryItemCost =
+    createdAccount.quantity * createdAccount.purchasePrice;
+
+  const debitId = uuidv4();
+  const creditId = uuidv4();
+  //update journal entry
+  await createJournalEntry({
+    workspaceId,
+    transactions: [
+      {
+        type: "CREDIT",
+        accountId: currentAssetAccount.id,
+        amount: totalInventoryItemCost,
+        note: `Purchase of ${createdAccount.name}`,
+        relatedTransactionId: debitId,
+        id: creditId,
+      },
+      {
+        type: "DEBIT",
+        // bank account or the vendor account
+        accountId: "",
+        amount: totalInventoryItemCost,
+        note: `Purchase of ${createdAccount.name}`,
+        relatedTransactionId: creditId,
+        id: debitId,
+      },
+    ],
+    description: `Purchase of ${createdAccount.name}`,
+    createdBy: workspaceId,
+    dateOfEntry: new Date(),
+  });
+}
+
+export async function reorderInventoryItem(id: string, quantity: number) {
+  return await prisma.inventoryItem.update({
+    where: { id },
+    data: {
+      quantity: { increment: quantity },
+    },
+  });
+}
+
+export async function getInventoryAssetsAccount() {
+  return await prisma.account.findFirst({
+    where: { name: "Inventory Assets" },
+  });
+}
+
+// export async function updateInventoryItem(id: string, data: Omit<InventoryItem, "id"|"createdAt"|"updatedAt">) {
+//   return await prisma.inventoryItem.update({
+//     where: { id },
+//     data,
+//   });
+// }

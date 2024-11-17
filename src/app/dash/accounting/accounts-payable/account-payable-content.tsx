@@ -128,7 +128,7 @@ export default function AccountsPayableContent({
               color="inherit"
               LinkComponent={Link}
               href={
-                paths.dashboard.accounting.accounts_receivable.customer_profiles
+                paths.dashboard.accounting.accounts_payable.vendor_management
               }
             >
               Vendors

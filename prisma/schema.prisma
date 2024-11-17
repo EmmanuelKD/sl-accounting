@@ -11,7 +11,7 @@ datasource db {
 model Account {
   id              String          @id @default(uuid())
   name            String
-  number          String
+  number          String          @unique
   type            AccountType
   balance         Float           @default(0.0)
   status          AccountStatus   @default(ACTIVE)
@@ -25,6 +25,7 @@ model Account {
   workspace       Workspace       @relation(fields: [workspaceId], references: [id])
   workspaceId     String
   Reimbursement   Reimbursement[]
+  InventoryItem   InventoryItem[]
 }
 
 model JournalEntry {
@@ -61,6 +62,8 @@ model Transaction {
   journalEntryId       String
   workspace            Workspace       @relation(fields: [workspaceId], references: [id])
   workspaceId          String
+  Item                 InventoryItem?  @relation(fields: [itemId], references: [id])
+  itemId               String?
 }
 
 model Period {
@@ -82,6 +85,7 @@ enum AccountType {
   EQUITY
   REVENUE
   EXPENSE
+  CONTRA_ASSET
 }
 
 enum AccountStatus {
@@ -148,6 +152,8 @@ model Workspace {
   RoleHistory        RoleHistory[]
   UploadFile         UploadFile[]
   Benefit            Benefit[]
+  InventoryItem      InventoryItem[]
+  AccountsPayable    AccountsPayable[]
 }
 
 model User {
@@ -174,21 +180,18 @@ enum UserRole {
 /// new 
 
 model Customer {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  phone     String?
-  address   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
-  workspaceId String
-
-  // Relationship to AR and Invoices
+  id                 String               @id @default(uuid())
+  name               String
+  email              String               @unique
+  phone              String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  workspace          Workspace            @relation(fields: [workspaceId], references: [id])
+  workspaceId        String
   accountsReceivable AccountsReceivable[]
   invoices           Invoice[]
   payments           Payment[]
+  Address            Address[]
 }
 
 model AccountsReceivable {
@@ -226,17 +229,19 @@ model Invoice {
   accountsReceivable   AccountsReceivable? @relation(fields: [accountsReceivableId], references: [id])
   Vendor               Vendor?             @relation(fields: [vendorId], references: [id])
   vendorId             String?
+  AccountsPayable      AccountsPayable?    @relation(fields: [accountsPayableId], references: [id])
+  accountsPayableId    String?
 }
 
 model Payment {
-  id         String        @id @default(uuid())
+  id         String      @id @default(uuid())
   amount     Float
-  date       DateTime      @default(now())
-  method     PaymentMethod // Enum: CASH, CREDIT_CARD, BANK_TRANSFER, etc.
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  date       DateTime    @default(now())
+  method     PaymentMode // Enum: CASH, CREDIT_CARD, BANK_TRANSFER, etc.
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
   customerId String
-  customer   Customer      @relation(fields: [customerId], references: [id])
+  customer   Customer    @relation(fields: [customerId], references: [id])
 
   workspace            Workspace           @relation(fields: [workspaceId], references: [id])
   workspaceId          String
@@ -247,6 +252,8 @@ model Payment {
   accountsReceivable   AccountsReceivable? @relation(fields: [accountsReceivableId], references: [id])
   Vendor               Vendor?             @relation(fields: [vendorId], references: [id])
   vendorId             String?
+  AccountsPayable      AccountsPayable?    @relation(fields: [accountsPayableId], references: [id])
+  accountsPayableId    String?
 }
 
 enum InvoiceStatus {
@@ -255,11 +262,11 @@ enum InvoiceStatus {
   OVERDUE
 }
 
-enum PaymentMethod {
-  CASH
-  CREDIT_CARD
-  BANK_TRANSFER
-}
+// enum PaymentMethod {
+//   CASH
+//   CREDIT_CARD
+//   BANK_TRANSFER
+// }
 
 model ARTransaction {
   id                   String             @id @default(uuid())
@@ -281,18 +288,19 @@ enum ARTransactionType {
 }
 
 model Vendor {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  phone         String?
-  address       String?
-  contactPerson String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  invoices      Invoice[]
-  payments      Payment[]
-  workspace     Workspace @relation(fields: [workspaceId], references: [id])
-  workspaceId   String
+  id              String            @id @default(cuid())
+  name            String
+  email           String            @unique
+  phone           String?
+  Address         Address[]
+  contactPerson   String?
+  invoices        Invoice[]
+  payments        Payment[]
+  workspace       Workspace         @relation(fields: [workspaceId], references: [id])
+  workspaceId     String
+  updatedAt       DateTime          @updatedAt
+  createdAt       DateTime          @default(now())
+  accountsPayable AccountsPayable[]
 }
 
 // for payroll
@@ -350,8 +358,8 @@ model Salary {
   // allowances            Float
   deductionsBeforTax    Float         @default(0)
   deductionsAfterTax    Float         @default(0)
-  bonusBeforTax    Float         @default(0)
-  bonusAfterTax    Float         @default(0)
+  bonusBeforTax         Float         @default(0)
+  bonusAfterTax         Float         @default(0)
   tax                   Float
   NASSIT                Float // tax
   salaryCalculationJson Json?
@@ -382,6 +390,11 @@ model PayrollItem {
   employeeId  String
   employee    Employee    @relation(fields: [employeeId], references: [id])
   salaryId    String
+  basicSalary Float
+  grossSalary Float
+  netSalary   Float
+  deductions  Float
+  bonuses     Float
   salary      Salary      @relation(fields: [salaryId], references: [id])
   month       Int // 1-12 for January-December
   year        Int // Year of the payroll
@@ -553,4 +566,133 @@ model UploadFile {
   url         String
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
   workspaceId String
+}
+
+/// inventory management
+
+model InventoryItem {
+  id                 String             @id @default(uuid())
+  sku                String             @unique
+  description        String?
+  quantityInStock    Int                @default(0)
+  purchasePrice      Float
+  sellingPrice       Float
+  supplierName       String
+  supplierContact    String
+  inventoryAccount   String
+  paymentMode        PaymentMode
+  depreciationMethod DepreciationMethod
+  usefulLife         Int
+  location           String
+  notes              String?
+  name               String
+  imgUrl             String?
+  salvageValue       Float              @default(0)
+  unitCost           Float
+  dateOfPurchase     DateTime
+  expirationDate     DateTime
+  accountId          String
+  account            Account            @relation(fields: [accountId], references: [id])
+  quantity           Int                @default(0) // Current stock level
+  reorderLevel       Int                @default(0) // Trigger reordering at this level
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  categoryId         Int?
+  category           InventoryCategory
+  // ? @relation(fields: [categoryId], references: [id])
+  transactions       Transaction[]
+  workspace          Workspace          @relation(fields: [workspaceId], references: [id])
+  workspaceId        String
+}
+
+// model InventoryCategory {
+//   id    Int             @id @default(autoincrement())
+//   name  String          @unique
+//   items InventoryItem[]
+// }
+
+enum InventoryCategory {
+  RAW_MATERIALS
+  WORK_IN_PROGRESS
+  FINISHED_GOODS
+  MRO_SUPPLIES
+  CONSUMABLES
+  PACKAGING
+  PERISHABLE_GOODS
+  HIGH_VALUE_ITEMS
+  NON_INVENTORY_ITEMS
+  RETURNED_GOODS
+  REFURBISHED_GOODS
+  // HAZARDOUS_MATERIALS
+  SPARE_PARTS
+  OFFICE_SUPPLIES
+  EQUIPMENT
+  ASSETS
+  // SERVICE_ITEMS
+  SOFTWARE_LICENSES
+  RENTAL_ITEMS
+  PROMOTIONAL_ITEMS
+  PACKAGING_MATERIALS
+  // LAB_SUPPLIES
+  TESTING_EQUIPMENT
+}
+
+enum DepreciationMethod {
+  STRAIGHT_LINE
+  DECLINING_BALANCE
+}
+
+model Address {
+  id         String      @id @default(uuid())
+  street     String
+  city       String
+  region     String
+  type       AddressType
+  country    String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  vendorId   String?
+  Vendor     Vendor?     @relation(fields: [vendorId], references: [id])
+  customerId String?
+  Customer   Customer?   @relation(fields: [customerId], references: [id])
+}
+
+enum AddressType {
+  BILLING
+  SHIPPING
+}
+
+//// Account payable
+model AccountsPayable {
+  id        String   @id @default(uuid())
+  balance   Float    @default(0.0) // Tracks the total outstanding balance
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relation to Vendor
+  vendorId String
+  vendor   Vendor @relation(fields: [vendorId], references: [id])
+
+  // Relation to Workspace
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  // Related transactions and entries for AP
+  apTransactions APTransaction[]
+  Invoice        Invoice[]
+  Payment        Payment[]
+}
+
+model APTransaction {
+  id                String          @id @default(uuid())
+  accountsPayableId String
+  accountsPayable   AccountsPayable @relation(fields: [accountsPayableId], references: [id])
+
+  transactionDate DateTime        @default(now())
+  description     String?
+  amount          Float
+  type            TransactionType // ENUM: CREDIT, DEBIT, etc.
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
