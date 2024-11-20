@@ -65,7 +65,6 @@ const INVENTORY_CATEGORY_ACCOUNTS: Record<InventoryCategory, string> = {
   [InventoryCategory.RENTAL_ITEMS]: BUILDINGS_ACCOUNT, // Fixed assets or rental items inventory
   [InventoryCategory.PACKAGING_MATERIALS]: COST_OF_GOODS_SOLD_ACCOUNT, // Packaging materials inventory
   [InventoryCategory.TESTING_EQUIPMENT]: EQUIPMENT_AND_MACHINERY_ACCOUNT, // Fixed assets for testing equipment
-  //
   [InventoryCategory.PERISHABLE_GOODS]: INVENTORY_ACCOUNT, // Perishable goods inventory
   [InventoryCategory.RETURNED_GOODS]: INVENTORY_ACCOUNT, // Returned goods inventory
   [InventoryCategory.REFURBISHED_GOODS]: INVENTORY_ACCOUNT, // Refurbished goods inventory

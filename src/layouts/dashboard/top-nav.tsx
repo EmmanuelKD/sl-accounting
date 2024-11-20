@@ -48,6 +48,7 @@ export const TopNav = (props:TopNavPropTypes) => {
     id="topNavMain"
       component="header"
       sx={{
+
         backgroundColor: 'neutral.900',
         color: 'common.white',
         position: 'fixed',
@@ -72,7 +73,8 @@ export const TopNav = (props:TopNavPropTypes) => {
               orientation="vertical"
               sx={{
                 borderColor: 'neutral.500',
-                height: 36
+                // height: 36
+                // marginTop:0
               }}
             />
           )}
@@ -82,8 +84,9 @@ export const TopNav = (props:TopNavPropTypes) => {
             href={paths.index}
             sx={{
               display: 'inline-flex',
-              height: 24,
-              width: 24
+              // height: 24,
+              // width: 24
+              //  marginTop:0
             }}
           >
             <Logo />

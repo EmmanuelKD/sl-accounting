@@ -1,6 +1,11 @@
 "use client";
 import { getAllVendorsMeterdataAction } from "@/lib/actions/core-accounting/customers-vendors-actions";
 import {
+  createInventoryItemAction,
+  getInventoryItemsAction,
+} from "@/lib/actions/core-accounting/inventory-management-actions";
+import { HttpError } from "@/utils/errorHandler";
+import {
   Add as AddIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
@@ -8,10 +13,10 @@ import {
   Search as SearchIcon,
 } from "@mui/icons-material";
 import {
+  Autocomplete,
   Box,
   Button,
   Dialog,
-  DialogActions,
   DialogContent,
   DialogTitle,
   Drawer,
@@ -33,7 +38,6 @@ import {
   Typography,
   useMediaQuery,
   useTheme,
-  Autocomplete,
 } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import {
@@ -44,6 +48,7 @@ import {
 } from "@prisma/client";
 import Image from "next/image";
 import React, { ChangeEvent, useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import {
   CartesianGrid,
   Legend,
@@ -56,70 +61,28 @@ import {
 } from "recharts";
 import { VendorMetadata } from "types";
 
-// Mock data for inventory items
-const inventoryData = [
-  {
-    id: 1,
-    name: "Laptop",
-    sku: "LT001",
-    category: "Electronics",
-    quantity: 50,
-    lastRestocked: "2023-05-15",
-    costPerItem: 800,
-    totalValue: 40000,
-    depreciationMethod: "Straight-line",
-    taxExempt: false,
-  },
-  {
-    id: 2,
-    name: "Office Chair",
-    sku: "OC001",
-    category: "Furniture",
-    quantity: 100,
-    lastRestocked: "2023-04-20",
-    costPerItem: 150,
-    totalValue: 15000,
-    depreciationMethod: "None",
-    taxExempt: true,
-  },
-  {
-    id: 3,
-    name: "Printer",
-    sku: "PR001",
-    category: "Electronics",
-    quantity: 20,
-    lastRestocked: "2023-05-01",
-    costPerItem: 300,
-    totalValue: 6000,
-    depreciationMethod: "Declining balance",
-    taxExempt: false,
-  },
-  // Add more mock data as needed
-];
-
-// Mock data for depreciation chart
-const depreciationData = [
-  { year: 2023, value: 1000 },
-  { year: 2024, value: 900 },
-  { year: 2025, value: 810 },
-  { year: 2026, value: 729 },
-  { year: 2027, value: 656 },
-];
-
-const DashboardOverview = () => (
+const DashboardOverview = ({
+  totalInventoryValue,
+  lowStockAlerts,
+  mostRecentUpdate,
+}: {
+  totalInventoryValue: number;
+  lowStockAlerts: number;
+  mostRecentUpdate: string;
+}) => (
   <Paper elevation={3} sx={{ p: 2, mb: 3 }}>
     <Grid container spacing={3}>
       <Grid item xs={12} sm={4}>
         <Typography variant="subtitle1">Total Inventory Value</Typography>
-        <Typography variant="h4">$61,000</Typography>
+        <Typography variant="h4">SLL {totalInventoryValue ?? "0"}</Typography>
       </Grid>
       <Grid item xs={12} sm={4}>
         <Typography variant="subtitle1">Low-Stock Alerts</Typography>
-        <Typography variant="h4">3</Typography>
+        <Typography variant="h4">{lowStockAlerts ?? "0"}</Typography>
       </Grid>
       <Grid item xs={12} sm={4}>
         <Typography variant="subtitle1">Most Recent Update</Typography>
-        <Typography variant="h6">2023-05-15</Typography>
+        <Typography variant="h6">{mostRecentUpdate ?? "0000-00-00"}</Typography>
       </Grid>
     </Grid>
   </Paper>
@@ -136,7 +99,7 @@ const AddInventoryItemForm = ({
     data: Omit<InventoryItem, "id" | "createdAt" | "updatedAt">
   ) => void;
 }) => {
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [selectedImage, setSelectedImage] = useState<File>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -158,17 +121,67 @@ const AddInventoryItemForm = ({
         isCredit: value === "true",
       }));
     } else {
-      setInventoryItem((prev) => ({
-        ...prev,
-        [name as keyof InventoryItem]: value,
-      }));
+      if (
+        name === "reorderLevel" ||
+        name === "salvageValue" ||
+        name === "quantityInStock" ||
+        name === "purchasePrice" ||
+        name === "sellingPrice" ||
+        name === "usefulLife"
+      ) {
+        setInventoryItem((prev) => ({
+          ...prev,
+          [name as keyof InventoryItem]: Number.parseInt(`${value}`),
+        }));
+      } else {
+        setInventoryItem((prev) => ({
+          ...prev,
+          [name as keyof InventoryItem]: value,
+        }));
+      }
     }
   };
 
   // Example submit function (for demonstration)
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    const workspaceId = "cm2el4sot0002nhcysia1pnfu";
+
     e.preventDefault();
-    console.log("Inventory Item:", inventoryItem);
+    const formData = new FormData();
+    formData.append("inventory-image", selectedImage);
+    // console.log("Inventory Item:", inventoryItem);
+    const loadingId = toast.loading("Creating Inventory Item...");
+    try {
+      await createInventoryItemAction(
+        {
+          inventoryImage: formData,
+          inventoryItem: {
+            ...inventoryItem,
+            category: inventoryItem.category as InventoryCategory,
+            paymentMode: inventoryItem.paymentMode as PaymentMode,
+            depreciationMethod:
+              inventoryItem.depreciationMethod as DepreciationMethod,
+            imgUrl: "",
+          },
+          isCredit: inventoryItem.isCredit,
+          vendor:
+            inventoryItem.vendor?.id === "NO_ID_EXTERNAL"
+              ? null
+              : inventoryItem.vendor,
+        },
+        workspaceId
+      );
+      handleClose();
+      toast.success("Inventory Item Created Successfully");
+      toast.dismiss(loadingId);
+    } catch (error) {
+      toast.dismiss(loadingId);
+      if (error instanceof HttpError) {
+        toast.error(error.message);
+      } else {
+        toast.error("An error occurred");
+      }
+    }
     // Here, you would send `inventoryItem` to the backend or use it in other logic
   };
 
@@ -181,7 +194,7 @@ const AddInventoryItemForm = ({
     > & {
       isCredit: boolean;
       vendor: VendorMetadata | null;
-     }
+    }
   >({
     name: "",
     sku: "",
@@ -210,7 +223,6 @@ const AddInventoryItemForm = ({
   });
 
   const workspaceId = "cm2el4sot0002nhcysia1pnfu";
-
 
   const [vendors, setVendors] = useState<VendorMetadata[]>([]);
 
@@ -350,35 +362,30 @@ const AddInventoryItemForm = ({
             </Grid>
             {!inventoryItem.isCredit && (
               <Grid item xs={6}>
-               <FormControl fullWidth>
-                <InputLabel>Paying through</InputLabel>
-                <Select
-                  name="paymentMode"
-                  value={inventoryItem.paymentMode}
-                  onChange={handleChange}
-                >
-                  <MenuItem value={PaymentMode.CASH}>
-                   Cash
-                  </MenuItem>
-                  <MenuItem value={PaymentMode.BANK_TRANSFER}>
-                    Bank
-                  </MenuItem>
-                  <MenuItem value={PaymentMode.CHEQUE}>
-                   Cheque
-                  </MenuItem>
-                  <MenuItem value={PaymentMode.MOBILE_PAYMENT}>
-                    Mobile Payment
-                  </MenuItem>
-                  
-                </Select>
-              </FormControl>
+                <FormControl fullWidth>
+                  <InputLabel>Paying through</InputLabel>
+                  <Select
+                    name="paymentMode"
+                    value={inventoryItem.paymentMode}
+                    onChange={handleChange}
+                  >
+                    <MenuItem value={PaymentMode.CASH}>Cash</MenuItem>
+                    <MenuItem value={PaymentMode.BANK_TRANSFER}>Bank</MenuItem>
+                    <MenuItem value={PaymentMode.CHEQUE}>Cheque</MenuItem>
+                    <MenuItem value={PaymentMode.MOBILE_PAYMENT}>
+                      Mobile Payment
+                    </MenuItem>
+                  </Select>
+                </FormControl>
               </Grid>
             )}
             {/* Vendor Details (only visible if on credit) */}
 
             <Grid item xs={12} sm={6}>
               <Autocomplete
-                options={vendors.filter((v) => !(inventoryItem.isCredit && v.id === "NO_ID_EXTERNAL"))}
+                options={vendors.filter(
+                  (v) => !(inventoryItem.isCredit && v.id === "NO_ID_EXTERNAL")
+                )}
                 getOptionLabel={(option) => option.name}
                 renderInput={(params) => (
                   <TextField {...params} label="Vendor" fullWidth required />
@@ -392,7 +399,8 @@ const AddInventoryItemForm = ({
                   <li {...props}>
                     <Typography
                       sx={{
-                        color: option.id === "NO_ID_EXTERNAL" ? "red" : "inherit"
+                        color:
+                          option.id === "NO_ID_EXTERNAL" ? "red" : "inherit",
                       }}
                     >
                       {option.name}
@@ -407,8 +415,6 @@ const AddInventoryItemForm = ({
                 }}
               />
             </Grid>
-
-           
 
             {!inventoryItem.isCredit &&
               inventoryItem.vendor?.id === "NO_ID_EXTERNAL" && (
@@ -434,7 +440,7 @@ const AddInventoryItemForm = ({
                   </Grid>
                 </>
               )}
-            
+
             <Grid item xs={6}>
               <FormControl fullWidth>
                 <InputLabel>Depreciation Method</InputLabel>
@@ -565,7 +571,11 @@ const AddInventoryItemForm = ({
   );
 };
 
-const InventoryTable = () => {
+const InventoryTable = ({
+  inventoryData,
+}: {
+  inventoryData: InventoryItem[];
+}) => {
   const columns: GridColDef[] = [
     { field: "name", headerName: "Item Name", flex: 1 },
     { field: "sku", headerName: "SKU", flex: 1 },
@@ -821,6 +831,7 @@ export default function InventoryManagement() {
   const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
   const [detailedViewOpen, setDetailedViewOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
@@ -840,13 +851,46 @@ export default function InventoryManagement() {
   const handleDetailedViewClose = () => {
     setDetailedViewOpen(false);
   };
+  const handleAddItemSave = async (
+    data: Omit<
+      InventoryItem,
+      "id" | "createdAt" | "updatedAt" | "accountId" | "workspaceId"
+    >
+  ) => {
+    console.log("data", data);
+  };
 
+  const [inventoryItemData, setInventoryItem] = useState<InventoryItem[]>([]);
+
+  useEffect(() => {
+    const workspaceId = "cm2el4sot0002nhcysia1pnfu";
+
+    getInventoryItemsAction(workspaceId).then((iid) => {
+      setInventoryItem(iid);
+    });
+  }, []);
+  const lowStockAlerts = inventoryItemData.filter(
+    (it) => it.quantityInStock >= it.reorderLevel
+  ).length;
+  // const mostRecentDate = new Date(
+  //   // Math.max(...inventoryItemData.map((it) => new Date(it.createdAt).getTime())).toLocaleString()
+  // );
+  const mostRecentDate = inventoryItemData.reduce((latest, current) => {
+    return new Date(current.createdAt) > new Date(latest.createdAt) ? current : latest;
+});
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
         Inventory Management
       </Typography>
-      <DashboardOverview />
+      <DashboardOverview
+        lowStockAlerts={lowStockAlerts}
+        mostRecentUpdate={mostRecentDate.createdAt.toISOString().split("T")[0]}
+        totalInventoryValue={inventoryItemData.reduce(
+          (acc, curr) => acc + curr.quantityInStock * curr.purchasePrice,
+          0
+        )}
+      />
       <FiltersAndSearch />
       <Box sx={{ mb: 2 }}>
         <Button
@@ -858,12 +902,12 @@ export default function InventoryManagement() {
           Add New Item
         </Button>
       </Box>
-      <InventoryTable />
+      <InventoryTable inventoryData={inventoryItemData} />
       <LowStockAlerts />
       <AddInventoryItemForm
         open={addItemDialogOpen}
         handleClose={handleAddItemClose}
-        // handleSave={handleAddItemSave}
+        handleSave={handleAddItemSave}
       />
       <DetailedView
         open={detailedViewOpen}

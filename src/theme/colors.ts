@@ -32,16 +32,16 @@ export const blue = withAlphas({
 });
 
 export const dtiTheme=withAlphas({
-light:"#edd6d6",
-main:"#ac3434",
-dark:"#9f1b1b",
+light:"#A7E673",
+main:"#57D303",
+dark:"#3B9102",
 contrastText:"#FFFFFF",
 });
 
 export const dtiThemeSecondary=withAlphas({
-  light:"#88FFFF",
-  main:"#60e4e4",
-  dark:"#00BCBC",
+  light:"#FFA28E",
+  main:"#FF6F61",
+  dark:"#CC564D",
   contrastText:"#FFFFFF",
   });
 export const green = withAlphas({

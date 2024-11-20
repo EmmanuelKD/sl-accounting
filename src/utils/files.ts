@@ -3,6 +3,7 @@ import { UploadFile } from "@prisma/client";
 import fs from "fs";
 const uploadDir = "public/images/usersImg/";
 const uploadDirFiles = "public/images/employeesFiles/";
+const uploadInventoryDirFiles = "public/images/inventoryFiles/";
 
 const createDirectoryIfNotExists = (directoryPath: string) => {
   if (!fs.existsSync(directoryPath)) {
@@ -68,3 +69,22 @@ filefd: FormData,
   };
   return uploadedFiles;
 };
+
+
+export const saveInventoryFile = async (
+  filefd: FormData,
+    fileName: string,
+    inventoryId: string,
+  ) => {
+    const imagePath = `${uploadInventoryDirFiles}${inventoryId}/${fileName}.jpg`;
+    // const imageUrl = `/images/usersFiles/${employeeId}/${fileName}.jpg`;
+    const file = filefd.get("inventory-image") as File;
+  
+    createDirectoryIfNotExists(`${uploadInventoryDirFiles}${inventoryId}`);
+  
+    const buffer = Buffer.from(await file.arrayBuffer());
+    fs.writeFileSync(imagePath, buffer);
+    
+    return imagePath;
+  };
+  

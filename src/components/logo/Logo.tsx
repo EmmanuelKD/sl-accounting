@@ -22,8 +22,8 @@ const Logo = () => {
         <>
             <Avatar
                 alt="Logo"
-                src={'/logo.png'}
-                sx={{ width: 56, height: 56 }}
+                src={'/images/logo.png'}
+                sx={{ width: 46, height: 46 }}
             />
         </>
     );

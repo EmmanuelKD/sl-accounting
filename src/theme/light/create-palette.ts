@@ -24,8 +24,8 @@ export const createPalette = (config:any) => {
     info,
     mode: 'light',
     neutral,
-    primary: getPrimary(colorPreset),
-    secondary: getSecondary("dti-sec"),
+    primary: getPrimary('dti'),
+    secondary: getSecondary("dti-sec"),//"dti-sec"
     success,
     text: {
       primary: neutral[900],

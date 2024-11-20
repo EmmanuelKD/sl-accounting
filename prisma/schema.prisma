@@ -301,6 +301,7 @@ model Vendor {
   updatedAt       DateTime          @updatedAt
   createdAt       DateTime          @default(now())
   accountsPayable AccountsPayable[]
+  InventoryItem   InventoryItem[]
 }
 
 // for payroll
@@ -579,10 +580,15 @@ model InventoryItem {
   sellingPrice       Float
   supplierName       String
   supplierContact    String
+  supplier           Vendor?            @relation(fields: [supplierId], references: [id])
+  supplierId         String?
   inventoryAccount   String
   paymentMode        PaymentMode
   depreciationMethod DepreciationMethod
   usefulLife         Int
+  isCredit           Boolean            @default(false)
+  fullyPaid          Boolean            @default(false)
+  fullyDepreciated   Boolean            @default(false)
   location           String
   notes              String?
   name               String
@@ -599,7 +605,6 @@ model InventoryItem {
   updatedAt          DateTime           @updatedAt
   categoryId         Int?
   category           InventoryCategory
-  // ? @relation(fields: [categoryId], references: [id])
   transactions       Transaction[]
   workspace          Workspace          @relation(fields: [workspaceId], references: [id])
   workspaceId        String

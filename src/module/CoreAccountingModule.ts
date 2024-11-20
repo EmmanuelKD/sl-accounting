@@ -31,6 +31,7 @@ import {
   SALARIES_AND_WAGES_ACCOUNT,
   UTILITIES_EXPENSE_ACCOUNT,
   DEPRECIATION_EXPENSE_ACCOUNT,
+  INVENTORY_CATEGORY_ACCOUNTS,
 } from "@/const";
 import { HttpError } from "@/utils/errorHandler";
 import { calculateTax } from "@/utils/tax-calculatory";
@@ -909,27 +910,27 @@ export async function createJournalEntry({
     period = await createPeriod(startOfTheMonth, endOfTheMonth, workspaceId);
   }
 
-  const transactionData = await Promise.all(
-    transactions.map(async (t) => {
-      if (t.type === "CREDIT") {
-        await creditAccount(t.accountId, t.amount);
-      } else {
-        await debitAccount(t.accountId, t.amount);
-      }
-      return {
-        id: t.id,
-        amount: t.amount,
-        type: t.type,
-        accountId: t.accountId,
-        workspaceId,
-        note: t.note,
-        relatedTransactionId: t.relatedTransactionId,
-      };
-    })
-  );
-
   // Create journal entry and associated transactions in a transaction
   const journalEntry = await prisma.$transaction(async (prisma) => {
+    const transactionData = await Promise.all(
+      transactions.map(async (t) => {
+        // if (t.type === "CREDIT") {
+        //   await creditAccount(t.accountId, t.amount);
+        // } else {
+        //   await debitAccount(t.accountId, t.amount);
+        // }
+        return {
+          id: t.id,
+          amount: t.amount,
+          type: t.type,
+          accountId: t.accountId,
+          workspaceId,
+          note: t.note,
+          relatedTransactionId: t.relatedTransactionId,
+        };
+      })
+    );
+
     const entry = await prisma.journalEntry.create({
       data: {
         description,
@@ -944,15 +945,6 @@ export async function createJournalEntry({
     });
 
     // Only update account balances after successful journal entry creation
-    await Promise.all(
-      transactions.map(async (t) => {
-        if (t.type === "CREDIT") {
-          await creditAccount(t.accountId, t.amount);
-        } else {
-          await debitAccount(t.accountId, t.amount);
-        }
-      })
-    );
 
     return entry;
   });
@@ -2255,13 +2247,14 @@ export async function createInventoryItem(
       InventoryItem,
       "id" | "createdAt" | "updatedAt" | "accountId" | "workspaceId"
     >;
-
+    isCredit: boolean;
     vendor: VendorMetadata | null;
   },
+  inventoryId: string,
   workspaceId: string
 ) {
   const accountNumber =
-    ASSETS_ACCOUNT[data.inventoryItem.category as unknown as InventoryCategory];
+    INVENTORY_CATEGORY_ACCOUNTS[data.inventoryItem.category];
 
   const currentAssetAccount = await prisma.account.findFirst({
     where: { number: accountNumber },
@@ -2275,47 +2268,105 @@ export async function createInventoryItem(
     });
   }
 
+  const totalInventoryItemCost =
+    data.inventoryItem.quantityInStock * data.inventoryItem.purchasePrice;
+  // create suplyer if no id available, update supplyer
+  if (data.vendor && data.isCredit) {
+    //account payable for vendor
+    //credit account payable account
+    await prisma.accountsPayable.create({
+      data: {
+        apTransactions: {
+          create: {
+            amount: totalInventoryItemCost,
+            description: `Purchase of ${data.inventoryItem.name}`,
+            type: "CREDIT",
+          },
+        },
+        workspaceId,
+        vendorId: data.vendor?.id as string,
+      },
+    });
+
+    //debit current asset account
+    await debitAccount(currentAssetAccount.id, totalInventoryItemCost);
+  } else {
+    const vendor = await prisma.vendor.create({
+      data: {
+        name: data.inventoryItem.supplierContact, // Provide default values for required fields
+        email: data.inventoryItem.supplierContact,
+        workspaceId,
+        contactPerson: data.inventoryItem.supplierContact, // Add any other required fields from your Prisma schema
+      },
+    });
+    data.vendor = {
+      email: vendor.email,
+      id: vendor.id,
+      name: vendor.name,
+      phone: vendor.phone ?? "",
+    };
+  }
   // first check for current asset account
-  const createdAccount = await prisma.inventoryItem.create({
+  // const createdAccount =
+  await prisma.inventoryItem.create({
     data: {
-      ...data.inventoryItem,
+      id: inventoryId,
+      category: data.inventoryItem.category,
+      sku: data.inventoryItem.sku,
+      name: data.inventoryItem.name,
+      description: data.inventoryItem.description,
+      purchasePrice: data.inventoryItem.purchasePrice,
+      sellingPrice: data.inventoryItem.sellingPrice,
+      quantityInStock: data.inventoryItem.quantityInStock,
+      supplierName: data.inventoryItem.supplierName,
+      supplierContact: data.inventoryItem.supplierContact,
+      inventoryAccount: data.inventoryItem.inventoryAccount,
+      paymentMode: data.inventoryItem.paymentMode,
+      depreciationMethod: data.inventoryItem.depreciationMethod,
+      usefulLife: data.inventoryItem.usefulLife,
+      location: data.inventoryItem.location,
+      notes: data.inventoryItem.notes,
+      unitCost: data.inventoryItem.unitCost,
+      isCredit: data.isCredit,
+      dateOfPurchase: new Date(data.inventoryItem.dateOfPurchase),
+      expirationDate: new Date(data.inventoryItem.expirationDate),
       accountId: currentAssetAccount.id,
+      workspaceId,
+      supplierId: data.vendor?.id as string,
+      imgUrl: data.inventoryItem.imgUrl,
+    },
+  });
+
+  if (!data.isCredit) {
+    //    await prisma.transaction.create({
+    //   data: {
+    //     amount: totalInventoryItemCost,
+
+    //   },
+    // });
+
+    //Debit: Inventory (Asset Account)
+    await debitAccount(currentAssetAccount.id, totalInventoryItemCost);
+
+    const cashAccount = await prisma.account.findFirst({
+      where: { number: CASH_AND_CASH_EQUIVALENTS_ACCOUNT },
+    });
+
+    if (cashAccount) {
+      //credit cash account
+      await creditAccount(cashAccount.id, totalInventoryItemCost);
+    }
+  }
+}
+
+export async function getInventoryItems(workspaceId: string) {
+  const inventory = await prisma.inventoryItem.findMany({
+    where: {
       workspaceId,
     },
   });
-  const totalInventoryItemCost =
-    createdAccount.quantity * createdAccount.purchasePrice;
-
-  const debitId = uuidv4();
-  const creditId = uuidv4();
-  //update journal entry
-  await createJournalEntry({
-    workspaceId,
-    transactions: [
-      {
-        type: "CREDIT",
-        accountId: currentAssetAccount.id,
-        amount: totalInventoryItemCost,
-        note: `Purchase of ${createdAccount.name}`,
-        relatedTransactionId: debitId,
-        id: creditId,
-      },
-      {
-        type: "DEBIT",
-        // bank account or the vendor account
-        accountId: "",
-        amount: totalInventoryItemCost,
-        note: `Purchase of ${createdAccount.name}`,
-        relatedTransactionId: creditId,
-        id: debitId,
-      },
-    ],
-    description: `Purchase of ${createdAccount.name}`,
-    createdBy: workspaceId,
-    dateOfEntry: new Date(),
-  });
+  return inventory;
 }
-
 export async function reorderInventoryItem(id: string, quantity: number) {
   return await prisma.inventoryItem.update({
     where: { id },
