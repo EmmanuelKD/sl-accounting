@@ -1,37 +1,39 @@
 import {
-  ASSETS_ACCOUNT,
-  CURRENT_ASSETS_ACCOUNT,
-  CASH_AND_CASH_EQUIVALENTS_ACCOUNT,
+  ACCOUNTS_PAYABLE_ACCOUNT,
   ACCOUNTS_RECEIVABLE_ACCOUNT,
-  INVENTORY_ACCOUNT,
-  RAW_MATERIALS_ACCOUNT,
-  WORK_IN_PROGRESS_ACCOUNT,
+  ACCUMULATED_DEPRECIATION_ACCOUNT,
+  ASSETS_ACCOUNT,
+  BUILDINGS_ACCOUNT,
+  CASH_AND_CASH_EQUIVALENTS_ACCOUNT,
+  CONTRA_ASSETS_ACCOUNT,
+  COST_OF_GOODS_SOLD_ACCOUNT,
+  CURRENT_ASSETS_ACCOUNT,
+  DEPRECIATION_EXPENSE_ACCOUNT,
+  DISCOUNT_ACCOUNT,
+  EQUIPMENT_AND_MACHINERY_ACCOUNT,
+  EQUITY_ACCOUNT,
+  EXPENSES_ACCOUNT,
   FINISHED_GOODS_ACCOUNT,
   FIXED_ASSETS_ACCOUNT,
+  INVENTORY_ACCOUNT,
+  INVENTORY_CATEGORY_ACCOUNTS,
   LAND_ACCOUNT,
-  BUILDINGS_ACCOUNT,
-  EQUIPMENT_AND_MACHINERY_ACCOUNT,
-  ACCUMULATED_DEPRECIATION_ACCOUNT,
+  LIABILITIES_ACCOUNT,
+  LONG_TERM_DEBT_ACCOUNT,
+  OWNERS_EQUITY_ACCOUNT,
+  RAW_MATERIALS_ACCOUNT,
   REIMBURSEMENT_ACCOUNT_ID,
   REIMBURSEMENT_ACCOUNT_NAME,
   REIMBURSEMENT_ACCOUNT_NUMBER,
   REIMBURSEMENT_ACCOUNT_TYPE,
-  LIABILITIES_ACCOUNT,
-  ACCOUNTS_PAYABLE_ACCOUNT,
-  SHORT_TERM_LOANS_ACCOUNT,
-  LONG_TERM_DEBT_ACCOUNT,
-  EQUITY_ACCOUNT,
-  OWNERS_EQUITY_ACCOUNT,
   RETAINED_EARNINGS_ACCOUNT,
   REVENUE_ACCOUNT,
+  SALARIES_AND_WAGES_ACCOUNT,
   SALES_REVENUE_ACCOUNT,
   SERVICE_REVENUE_ACCOUNT,
-  EXPENSES_ACCOUNT,
-  COST_OF_GOODS_SOLD_ACCOUNT,
-  SALARIES_AND_WAGES_ACCOUNT,
+  SHORT_TERM_LOANS_ACCOUNT,
   UTILITIES_EXPENSE_ACCOUNT,
-  DEPRECIATION_EXPENSE_ACCOUNT,
-  INVENTORY_CATEGORY_ACCOUNTS,
+  WORK_IN_PROGRESS_ACCOUNT,
 } from "@/const";
 import { HttpError } from "@/utils/errorHandler";
 import { calculateTax } from "@/utils/tax-calculatory";
@@ -40,12 +42,10 @@ import {
   AccountStatus,
   AccountType,
   Address,
-  ARTransactionType,
   Benefit,
   Deduction,
   Employee,
   EmploymentStatus,
-  InventoryCategory,
   InventoryItem,
   // Salary,
   LeaveStatus,
@@ -58,13 +58,13 @@ import {
   UploadFile,
   Vendor,
 } from "@prisma/client";
-import { v4 as uuidv4 } from "uuid";
 import { VendorMetadata } from "types";
 const prisma = new PrismaClient();
 // creating account
 
 export async function createDefaultAccounts(workspaceId: string) {
   const defaultAccounts = [
+    // Assets ans cub accounts
     {
       name: "Assets",
       number: ASSETS_ACCOUNT,
@@ -167,14 +167,6 @@ export async function createDefaultAccounts(workspaceId: string) {
                   name: "Equipment and Machinery",
                   number: EQUIPMENT_AND_MACHINERY_ACCOUNT,
                   type: AccountType.ASSET,
-                  balance: 0,
-                  status: AccountStatus.ACTIVE,
-                  workspaceId: workspaceId,
-                },
-                {
-                  name: "Accumulated Depreciation",
-                  number: ACCUMULATED_DEPRECIATION_ACCOUNT,
-                  type: AccountType.CONTRA_ASSET,
                   balance: 0,
                   status: AccountStatus.ACTIVE,
                   workspaceId: workspaceId,
@@ -325,6 +317,35 @@ export async function createDefaultAccounts(workspaceId: string) {
         ],
       },
     },
+    // Contra Asset And sub accounts
+    {
+      name: "Contra Assets",
+      number: CONTRA_ASSETS_ACCOUNT,
+      type: AccountType.CONTRA_ASSET,
+      balance: 0,
+      status: AccountStatus.ACTIVE,
+      workspaceId: workspaceId,
+      subAccounts: {
+        create: [
+          {
+            name: "Accumulated Depreciation",
+            number: ACCUMULATED_DEPRECIATION_ACCOUNT,
+            type: AccountType.CONTRA_ASSET,
+            balance: 0,
+            status: AccountStatus.ACTIVE,
+            workspaceId: workspaceId,
+          },
+          {
+            name: "Discount",
+            number: DISCOUNT_ACCOUNT,
+            type: AccountType.CONTRA_ASSET,
+            balance: 0,
+            status: AccountStatus.ACTIVE,
+            workspaceId: workspaceId,
+          },
+        ],
+      },
+    },
   ];
 
   try {
@@ -336,8 +357,6 @@ export async function createDefaultAccounts(workspaceId: string) {
     console.log("Default accounts created successfully!");
   } catch (error) {
     console.error("Error creating default accounts:", error);
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -368,6 +387,7 @@ export const createAccount = async (accountData: {
           id: accountData.workspaceId,
         },
       });
+
       if (!workspace) {
         throw new HttpError({
           code: 404,
@@ -375,6 +395,12 @@ export const createAccount = async (accountData: {
           message: "Workspace not found",
         });
       }
+    } else {
+      throw new HttpError({
+        code: 404,
+        success: false,
+        message: "Workspace not found",
+      });
     }
 
     const account = await prisma.account.create({
@@ -393,15 +419,41 @@ export const createAccount = async (accountData: {
         }),
       },
     });
+
     return account;
   } catch (error) {
     throw new HttpError({
       code: 500,
       success: false,
-      message: "Failed to create account",
+      message: (error as any).message || "Failed to create account",
       error: error,
     });
   }
+};
+export const changeAccountParent = async (
+  accountId: string,
+  parentAccountId: string
+) => {
+  const updated=await prisma.account.update({
+    where: { id: accountId },
+    data: {
+      parentAccountId,
+    },
+  });
+  return await prisma.account.findMany({
+    where:{
+      workspaceId:updated.workspaceId
+    },
+    select: {
+      id: true,
+      name: true,
+      number: true,
+      type: true,
+      balance: true,
+      workspaceId: true,
+      parentAccountId: true,
+    },
+  });
 };
 
 export const getAccountById = async (id: string) => {
@@ -425,11 +477,20 @@ export const getAccountById = async (id: string) => {
   }
 };
 
-export const getAccounts = async () => {
+export const getAccounts = async (workspaceId:string) => {
   try {
     const accounts = await prisma.account.findMany({
-      include: {
-        subAccounts: true, // include sub-accounts for hierarchy
+      where:{
+        workspaceId
+      },
+      select: {
+        id: true,
+        name: true,
+        number: true,
+        type: true,
+        balance: true,
+        workspaceId: true,
+        parentAccountId: true,
       },
     });
     return accounts;
@@ -774,24 +835,7 @@ export async function createReimbursement(data: {
     });
   }
 
-  // Check if the reimbursement account exists
-  let account = await prisma.account.findUnique({
-    where: { id: REIMBURSEMENT_ACCOUNT_ID },
-  });
-
-  // If the account does not exist, create it
-  if (!account) {
-    account = await prisma.account.create({
-      data: {
-        name: REIMBURSEMENT_ACCOUNT_NAME, // Set a default name or customize this
-        number: REIMBURSEMENT_ACCOUNT_NUMBER, // Set a default number or customize this
-        type: REIMBURSEMENT_ACCOUNT_TYPE, // Define the account type appropriately
-        balance: 0, // Initial balance
-        workspaceId: data.workspaceId,
-      },
-    });
-  }
-
+  // Create journal entry first
   const journalEntry = await prisma.journalEntry.create({
     data: {
       description: `Reimbursement for ${data.description}`,
@@ -799,17 +843,21 @@ export async function createReimbursement(data: {
       workspaceId: data.workspaceId,
       periodId: period.id,
       transactions: {
-        create: {
-          amount: data.amount,
-          type: "DEBIT" as TransactionType,
-          accountId: data.accountId,
-          workspaceId: data.workspaceId,
-          note: data.description,
-        },
+        create: [
+          {
+            amount: data.amount,
+            type: "DEBIT",
+            accountId: data.accountId,
+            workspaceId: data.workspaceId,
+            note: data.description,
+            accountType: "EXPENSE", // Changed from ASSET to EXPENSE for reimbursements
+          },
+        ],
       },
     },
   });
 
+  // Create the reimbursement record
   const reimbursement = await prisma.reimbursement.create({
     data: {
       amount: data.amount,
@@ -875,11 +923,13 @@ interface CreateJournalEntryInput {
   transactions: {
     amount: number;
     type: TransactionType;
-    accountId: string;
+    fromAccountId: string;
+    toAccountId: string;
     note: string;
-    relatedTransactionId: string;
-    id: string;
-  }[];
+    accountType: AccountType;
+    relatedTransactionId?: string;
+    itemId?: string;
+  };
   workspaceId: string;
   createdBy: string;
   dateOfEntry: Date;
@@ -892,7 +942,7 @@ export async function createJournalEntry({
   workspaceId,
   createdBy,
 }: CreateJournalEntryInput) {
-  // Fetch or create the relevant period for the date of entry
+  // Find or create period
   let period = await getSmallestPeriodByDate(dateOfEntry, workspaceId);
 
   if (!period) {
@@ -910,41 +960,31 @@ export async function createJournalEntry({
     period = await createPeriod(startOfTheMonth, endOfTheMonth, workspaceId);
   }
 
-  // Create journal entry and associated transactions in a transaction
+  // Create journal entry with transactions
   const journalEntry = await prisma.$transaction(async (prisma) => {
-    const transactionData = await Promise.all(
-      transactions.map(async (t) => {
-        // if (t.type === "CREDIT") {
-        //   await creditAccount(t.accountId, t.amount);
-        // } else {
-        //   await debitAccount(t.accountId, t.amount);
-        // }
-        return {
-          id: t.id,
-          amount: t.amount,
-          type: t.type,
-          accountId: t.accountId,
-          workspaceId,
-          note: t.note,
-          relatedTransactionId: t.relatedTransactionId,
-        };
-      })
-    );
-
     const entry = await prisma.journalEntry.create({
       data: {
         description,
         createdBy,
         workspaceId,
         periodId: period.id,
+        date: dateOfEntry,
         transactions: {
-          create: transactionData,
+          create: {
+            amount: transactions.amount,
+            type: transactions.type,
+            fromAccountId: transactions.fromAccountId,
+            toAccountId: transactions.toAccountId,
+            workspaceId,
+            note: transactions.note,
+            accountType: transactions.accountType,
+            relatedTransactionId: transactions.relatedTransactionId,
+            itemId: transactions.itemId,
+          },
         },
       },
       include: { transactions: true },
     });
-
-    // Only update account balances after successful journal entry creation
 
     return entry;
   });
@@ -2245,10 +2285,19 @@ export async function createInventoryItem(
   data: {
     inventoryItem: Omit<
       InventoryItem,
-      "id" | "createdAt" | "updatedAt" | "accountId" | "workspaceId"
+      | "id"
+      | "createdAt"
+      | "updatedAt"
+      | "accountId"
+      | "workspaceId"
+      | "quantity"
+      | "reorderLevel"
+      | "fullyPaid"
+      | "fullyDepreciated"
+      | "salvageValue"
     >;
     isCredit: boolean;
-    vendor: VendorMetadata | null;
+    vendor: { id: string; email: string; name: string; phone: string } | null;
   },
   inventoryId: string,
   workspaceId: string
@@ -2270,93 +2319,34 @@ export async function createInventoryItem(
 
   const totalInventoryItemCost =
     data.inventoryItem.quantityInStock * data.inventoryItem.purchasePrice;
-  // create suplyer if no id available, update supplyer
+
+  // Handle vendor and accounts payable
   if (data.vendor && data.isCredit) {
-    //account payable for vendor
-    //credit account payable account
     await prisma.accountsPayable.create({
       data: {
-        apTransactions: {
-          create: {
-            amount: totalInventoryItemCost,
-            description: `Purchase of ${data.inventoryItem.name}`,
-            type: "CREDIT",
-          },
-        },
+        account: { connect: { id: currentAssetAccount.id } },
+        vendor: { connect: { id: data.vendor.id } },
         workspaceId,
-        vendorId: data.vendor?.id as string,
       },
     });
 
-    //debit current asset account
     await debitAccount(currentAssetAccount.id, totalInventoryItemCost);
-  } else {
-    const vendor = await prisma.vendor.create({
-      data: {
-        name: data.inventoryItem.supplierContact, // Provide default values for required fields
-        email: data.inventoryItem.supplierContact,
-        workspaceId,
-        contactPerson: data.inventoryItem.supplierContact, // Add any other required fields from your Prisma schema
-      },
-    });
-    data.vendor = {
-      email: vendor.email,
-      id: vendor.id,
-      name: vendor.name,
-      phone: vendor.phone ?? "",
-    };
   }
-  // first check for current asset account
-  // const createdAccount =
-  await prisma.inventoryItem.create({
+
+  // Create inventory item
+  return await prisma.inventoryItem.create({
     data: {
       id: inventoryId,
-      category: data.inventoryItem.category,
-      sku: data.inventoryItem.sku,
-      name: data.inventoryItem.name,
-      description: data.inventoryItem.description,
-      purchasePrice: data.inventoryItem.purchasePrice,
-      sellingPrice: data.inventoryItem.sellingPrice,
-      quantityInStock: data.inventoryItem.quantityInStock,
-      supplierName: data.inventoryItem.supplierName,
-      supplierContact: data.inventoryItem.supplierContact,
-      inventoryAccount: data.inventoryItem.inventoryAccount,
-      paymentMode: data.inventoryItem.paymentMode,
-      depreciationMethod: data.inventoryItem.depreciationMethod,
-      usefulLife: data.inventoryItem.usefulLife,
-      location: data.inventoryItem.location,
-      notes: data.inventoryItem.notes,
-      unitCost: data.inventoryItem.unitCost,
-      isCredit: data.isCredit,
-      dateOfPurchase: new Date(data.inventoryItem.dateOfPurchase),
-      expirationDate: new Date(data.inventoryItem.expirationDate),
+      ...data.inventoryItem,
       accountId: currentAssetAccount.id,
       workspaceId,
-      supplierId: data.vendor?.id as string,
-      imgUrl: data.inventoryItem.imgUrl,
+      supplierId: data.vendor?.id,
+      quantity: data.inventoryItem.quantityInStock,
+      fullyPaid: !data.isCredit,
+      fullyDepreciated: false,
+      salvageValue: 0,
     },
   });
-
-  if (!data.isCredit) {
-    //    await prisma.transaction.create({
-    //   data: {
-    //     amount: totalInventoryItemCost,
-
-    //   },
-    // });
-
-    //Debit: Inventory (Asset Account)
-    await debitAccount(currentAssetAccount.id, totalInventoryItemCost);
-
-    const cashAccount = await prisma.account.findFirst({
-      where: { number: CASH_AND_CASH_EQUIVALENTS_ACCOUNT },
-    });
-
-    if (cashAccount) {
-      //credit cash account
-      await creditAccount(cashAccount.id, totalInventoryItemCost);
-    }
-  }
 }
 
 export async function getInventoryItems(workspaceId: string) {

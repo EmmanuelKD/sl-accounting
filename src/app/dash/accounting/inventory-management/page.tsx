@@ -120,25 +120,28 @@ const AddInventoryItemForm = ({
         ...prev,
         isCredit: value === "true",
       }));
+    } else if (name === "dateOfPurchase" || name === "expirationDate") {
+      setInventoryItem((prev) => ({
+        ...prev,
+        [name]: new Date(value as string),
+      }));
+    } else if (
+      name === "reorderLevel" ||
+      name === "salvageValue" ||
+      name === "quantityInStock" ||
+      name === "purchasePrice" ||
+      name === "sellingPrice" ||
+      name === "usefulLife"
+    ) {
+      setInventoryItem((prev) => ({
+        ...prev,
+        [name]: Number(value) || 0,
+      }));
     } else {
-      if (
-        name === "reorderLevel" ||
-        name === "salvageValue" ||
-        name === "quantityInStock" ||
-        name === "purchasePrice" ||
-        name === "sellingPrice" ||
-        name === "usefulLife"
-      ) {
-        setInventoryItem((prev) => ({
-          ...prev,
-          [name as keyof InventoryItem]: Number.parseInt(`${value}`),
-        }));
-      } else {
-        setInventoryItem((prev) => ({
-          ...prev,
-          [name as keyof InventoryItem]: value,
-        }));
-      }
+      setInventoryItem((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
     }
   };
 
@@ -496,7 +499,7 @@ const AddInventoryItemForm = ({
                 type="date"
                 InputLabelProps={{ shrink: true }}
                 fullWidth
-                value={inventoryItem.dateOfPurchase}
+                value={inventoryItem.dateOfPurchase.toISOString().split('T')[0]}
                 onChange={handleChange}
               />
             </Grid>
@@ -507,7 +510,7 @@ const AddInventoryItemForm = ({
                 type="date"
                 InputLabelProps={{ shrink: true }}
                 fullWidth
-                value={inventoryItem.expirationDate}
+                value={inventoryItem.expirationDate.toISOString().split('T')[0]}
                 onChange={handleChange}
               />
             </Grid>
@@ -870,14 +873,16 @@ export default function InventoryManagement() {
     });
   }, []);
   const lowStockAlerts = inventoryItemData.filter(
-    (it) => it.quantityInStock >= it.reorderLevel
+    (it) => it.quantityInStock <= it.reorderLevel
   ).length;
   // const mostRecentDate = new Date(
   //   // Math.max(...inventoryItemData.map((it) => new Date(it.createdAt).getTime())).toLocaleString()
   // );
-  const mostRecentDate = inventoryItemData.reduce((latest, current) => {
-    return new Date(current.createdAt) > new Date(latest.createdAt) ? current : latest;
-});
+  const mostRecentDate = inventoryItemData.length > 0 
+    ? inventoryItemData.reduce((latest, current) => {
+        return new Date(current.createdAt) > new Date(latest.createdAt) ? current : latest;
+      })
+    : { createdAt: new Date() };
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>

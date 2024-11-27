@@ -1,5 +1,13 @@
 "use client";
-import { ERROR_MESSAGE } from "@/const";
+import {
+  ASSETS_ACCOUNT,
+  CONTRA_ASSETS_ACCOUNT,
+  EQUITY_ACCOUNT,
+  ERROR_MESSAGE,
+  EXPENSES_ACCOUNT,
+  LIABILITIES_ACCOUNT,
+  REVENUE_ACCOUNT,
+} from "@/const";
 import { HttpError } from "@/utils/errorHandler";
 import {
   Button,
@@ -8,13 +16,13 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
-  FormControlLabel,
   InputLabel,
   MenuItem,
   Select,
-  Switch,
   TextField,
 } from "@mui/material";
+import { AccountType } from "@prisma/client";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { AccountMinimal } from "types";
@@ -23,53 +31,85 @@ interface AccountModalProps {
   open: boolean;
   onClose: () => void;
   onSave: (account: AccountMinimal) => void;
-  account: AccountMinimal | null;
-  accounts: AccountMinimal[];
+  parentAccount: AccountMinimal | null;
+  currentAccount: AccountMinimal | null;
+  action: "add" | "edit" | "add-sub";
 }
 
 export default function AccountModal({
   open,
   onClose,
   onSave,
-  account,
-  accounts,
+  parentAccount,
+  currentAccount,
+  action,
 }: AccountModalProps) {
-
-  // @todo work onusers workspace
-  const workspaceId = "cm2el4sot0002nhcysia1pnfu";
-  const [formData, setFormData] = useState<AccountMinimal>({
-    id: "",
-    number: "",
-    name: "",
-    type: "ASSET",
-    balance: 0,
-    status: "ACTIVE",
-    parentAccountId: "",
-    workspaceId: workspaceId,
-  });
-
-  useEffect(() => {
-    if (account) {
-      setFormData(account);
+  const { data: session } = useSession();
+  
+  // Initial form state based on action type
+  const getInitialFormState = () => {
+    const workspaceId = session?.user?.currentWorkspace ?? "";
+    // alert(workspaceId);
+    if (action === "edit" && currentAccount) {
+      return { ...currentAccount };
     } else {
-      setFormData({
+      return {
         id: "",
         number: "",
         name: "",
         type: "ASSET",
         balance: 0,
-        status: "ACTIVE",
-        parentAccountId: "",
+        parentAccountId: action === "add-sub" ? parentAccount?.id || "" : "",
         workspaceId: workspaceId,
-      });
+      } satisfies AccountMinimal;
     }
-  }, [account]);
+  };
+  const initialFormState = getInitialFormState();
+  const [formData, setFormData] = useState<AccountMinimal>(initialFormState);
 
+  useEffect(() => {
+    setFormData(initialFormState);
+  }, [currentAccount, parentAccount, action]);
+
+  // Add this function to get default values based on account type
+  const getDefaultAccountValues = (type: string) => {
+    const defaults: {
+      [key: string]: { number: string; name: string; type: AccountType };
+    } = {
+      ["Assets"]: { number: "1000", name: "Assets", type: "ASSET" },
+      ["Liabilities"]: {
+        number: "2000",
+        name: "Liabilities",
+        type: "LIABILITY",
+      },
+      ["Equity"]: { number: "3000", name: "Equity", type: "EQUITY" },
+      ["Revenue"]: { number: "4000", name: "Revenue", type: "REVENUE" },
+      ["Expenses"]: { number: "5000", name: "Expenses", type: "EXPENSE" },
+      ["Contra Assets"]: {
+        number: "1100",
+        name: "Contra Assets",
+        type: "CONTRA_ASSET",
+      },
+    };
+    return defaults[type] || { number: "", name: "" };
+  };
+
+  // Modify handleChange to update number and name when type changes
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | { name?: any; value: unknown }>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name as string]: value }));
+    setFormData((prev) => {
+      if (name === "type" && action === "add") {
+        const defaultValues = getDefaultAccountValues(value as string);
+        return {
+          ...prev,
+          [name]: value,
+          ...defaultValues,
+        };
+      }
+      return { ...prev, [name]: value };
+    });
   };
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,15 +137,42 @@ export default function AccountModal({
     <Dialog open={open} onClose={onClose} aria-labelledby="form-dialog-title">
       <form onSubmit={handleSubmit}>
         <DialogTitle id="form-dialog-title">
-          {account ? "Edit Account" : "Add New Account"}
+          {action === "add-sub"
+            ? `New Sub Account for ${parentAccount?.name}`
+            : action === "edit"
+            ? "Edit Account"
+            : "Add New Account"}
         </DialogTitle>
         <DialogContent>
+          {action === "add" && (
+            <FormControl fullWidth margin="dense">
+              <InputLabel id="account-type-label">Account Type</InputLabel>
+              <Select
+                labelId="account-type-label"
+                name="type"
+                value={formData.name}
+                // @ts-expect-error unk
+                onChange={handleChange}
+                required
+              >
+                <MenuItem value={"Assets"}>Asset</MenuItem>
+                <MenuItem value={"Liabilities"}>Liability</MenuItem>
+                <MenuItem value={"Equity"}>Equity</MenuItem>
+                <MenuItem value={"Revenue"}>Revenue</MenuItem>
+                <MenuItem value={"Expenses"}>Expense</MenuItem>
+                <MenuItem value={"Contra Assets"}>Contra Asset</MenuItem>
+              </Select>
+            </FormControl>
+          )}
+        
           <TextField
+          
             autoFocus
             margin="dense"
             name="number"
             label="Account Number"
             type="text"
+            disabled={action === "add"}
             fullWidth
             required
             value={formData.number}
@@ -114,6 +181,7 @@ export default function AccountModal({
           <TextField
             margin="dense"
             name="name"
+            disabled={action === "add"}
             label="Account Name"
             type="text"
             fullWidth
@@ -121,23 +189,7 @@ export default function AccountModal({
             value={formData.name}
             onChange={handleChange}
           />
-          <FormControl fullWidth margin="dense">
-            <InputLabel id="account-type-label">Account Type</InputLabel>
-            <Select
-              labelId="account-type-label"
-              name="type"
-              value={formData.type}
-              // @ts-expect-error unk
-              onChange={handleChange}
-              required
-            >
-              <MenuItem value="ASSET">Asset</MenuItem>
-              <MenuItem value="LIABILITY">Liability</MenuItem>
-              <MenuItem value="EQUITY">Equity</MenuItem>
-              <MenuItem value="REVENUE">Revenue</MenuItem>
-              <MenuItem value="EXPENSE">Expense</MenuItem>
-            </Select>
-          </FormControl>
+
           <TextField
             margin="dense"
             name="balance"
@@ -151,34 +203,6 @@ export default function AccountModal({
               startAdornment: "$",
             }}
           />
-          <FormControlLabel
-            control={
-              <Switch
-                checked={formData.status === "ACTIVE"}
-                onChange={handleStatusChange}
-                name="status"
-                color="primary"
-              />
-            }
-            label="Active"
-          />
-          <FormControl fullWidth margin="dense">
-            <InputLabel id="parent-account-label">Parent Account</InputLabel>
-            <Select
-              labelId="parent-account-label"
-              name="parentAccountId"
-              value={formData.parentAccountId}
-              // @ts-expect-error unk
-              onChange={handleChange}
-            >
-              <MenuItem value="">None</MenuItem>
-              {accounts.map((acc) => (
-                <MenuItem key={acc.id} value={acc.id}>
-                  {acc.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose} color="primary">

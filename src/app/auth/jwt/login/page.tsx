@@ -1,6 +1,7 @@
 "use client";
+import LoadingPage from "@/app/loading";
 import { useMounted } from "@/hooks/use-mounted";
-import { authenticate } from "@/lib/actions/auth";
+import { loginUser } from "@/module/UserManagementModule";
 import { paths } from "@/paths";
 import {
   Box,
@@ -11,14 +12,15 @@ import {
   Typography,
 } from "@mui/material";
 import { useFormik } from "formik";
+import { signIn } from "next-auth/react";
 import Head from "next/head";
 import NextLink from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as Yup from "yup";
 
 const initialValues = {
-  email: "admin@dti-sl.com",
-  password: "1961AccounT",
+  email: "",
+  password: "",
   submit: null,
 };
 
@@ -34,30 +36,35 @@ const Page = () => {
   const isMounted = useMounted();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const returnTo = searchParams.get("returnTo") || undefined;
-
+  // const returnTo = searchParams.get("returnTo") || undefined;
+  const callbackUrl = searchParams.get("callbackUrl") || paths.dashboard.index;
   const formik = useFormik({
     initialValues,
     validationSchema,
     onSubmit: async (values, helpers) => {
+      // const userManagement = new UserManagementModule();
       try {
-        await authenticate({
-          email: values.email,
-          password: values.password,
-          origin: returnTo || paths.dashboard.index,
-        });
+        const {
+          data: { user, token },
+        } = await loginUser(values.email, values.password);
 
-        if (isMounted()) {
-          router.push(returnTo || paths.dashboard.index);
-        }
+        await signIn("credentials", {
+          user: JSON.stringify(user),
+          accessToken: token,
+        });
+      
+        router.push(callbackUrl);
+        //
+        // router.push(returnTo || paths.dashboard.index);
+        // if (isMounted()) {
+        //   router.push(returnTo || paths.dashboard.index);
+        // }
       } catch (err: any) {
         console.error(err);
 
-        if (isMounted()) {
-          helpers.setStatus({ success: false });
-
-          helpers.setSubmitting(false);
-        }
+        helpers.setStatus({ success: false });
+        helpers.setSubmitting(false);
+        helpers.setErrors({ submit: err.message });
       }
     },
   });
@@ -76,9 +83,9 @@ const Page = () => {
           sx={{ mb: 3 }}
         >
           <Typography variant="h4">Login</Typography>
-          <Button component={NextLink} href={paths.index}>
+          {/* <Button component={NextLink} href={paths.index}>
             Choose Org.
-          </Button>
+          </Button> */}
         </Stack>
         <Stack spacing={2}>
           <TextField
@@ -131,7 +138,6 @@ const Page = () => {
             Forgot password
           </Button>
         </Box>
-        
       </form>
     </>
   );

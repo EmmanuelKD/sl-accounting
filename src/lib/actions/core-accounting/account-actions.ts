@@ -1,4 +1,3 @@
-
 "use server";
 import {
   createAccount,
@@ -7,6 +6,7 @@ import {
   deleteAccount,
   calculateAccountBalance,
   getAccounts,
+  changeAccountParent,
 } from "@/module/CoreAccountingModule"; // Path to the service layer
 import { AccountType } from "@prisma/client";
 
@@ -33,11 +33,19 @@ export async function getAccountByIdAction(accountId: string) {
 }
 
 // Server action to get all accounts
-export async function getAccountsAction() {
-  const accounts = await getAccounts();
+export async function getAccountsAction(workspaceId: string) {
+  const accounts = await getAccounts(workspaceId);
   return { accounts };
 }
 
+export async function changeAccountParentAction(
+  accountId: string,
+  parentAccountId: string
+) {
+  const accounts = await changeAccountParent(accountId, parentAccountId);
+  return { accounts };
+
+}
 // Server action to update an account
 export async function updateAccountAction(
   accountId: string,

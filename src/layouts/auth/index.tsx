@@ -88,7 +88,7 @@ export const AuthLayout = (props: LayoutPropTypes) => {
           />
           <Stack alignItems="center" spacing={2}>
             <Typography align="center" variant="h5">
-              Welcome to DTI-SL
+              Welcome to Hottacom Accounting
             </Typography>
             <Typography align="center" color="text.secondary" variant="body2">
               Firebase, known for its robust security features, offers

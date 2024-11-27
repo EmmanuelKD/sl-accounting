@@ -8,11 +8,14 @@ export async function createWorkspace(data: { name: string; users: User[] }) {
     const workspace = await prisma.workspace.create({
       data: {
         name: data.name,
-        users: {
-          connect: data.users.map((users) => ({ id: users.id })), // Connect existing user to the workspace
-        },
+        ...(data.users && {
+          users: {
+            connect: data.users.map((users) => ({ id: users.id })), // Connect existing user to the workspace
+          },
+        }),
       },
     });
+
     return { workspace };
   } catch (error) {
     console.error("Error creating workspace:", error);

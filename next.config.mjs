@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     webpack: (config) => {
-        config.resolve.alias['@'] = path.resolve(__dirname, 'src');
+        config.resolve.alias["@"] = path.resolve(__dirname, "src");
         return config;
     },
     async redirects() {
@@ -22,6 +22,7 @@ const nextConfig = {
         return config;
     },
     swcMinify: false,
+    transpilePackages: ['@mui/x-tree-view', '@mui/material'],
     modularizeImports: {
         '@mui/icons-material': {
             transform: '@mui/icons-material/{{member}}'
@@ -29,7 +30,7 @@ const nextConfig = {
     },
     env: {
         NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
-        
+
     },
     images: {
         remotePatterns: [

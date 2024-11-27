@@ -1,14 +1,18 @@
-import { Account } from "@prisma/client";
+import { Account, AccountType } from "@prisma/client";
 
-type AccountMinimal = Omit<
-  Account,
-  | "createdAt"
-  | "updatedAt"
-  // | "balance"
-  // | "status"
-  // | "transactions"
-  // | "journalEntries"
->;
+type AccountMinimal = {
+  number: string;
+  id: string;
+  name: string;
+  balance: number;
+  type: AccountType;
+  parentAccountId: string;
+  workspaceId:string;
+};
+interface AccountWithSubAccounts extends Account {
+  subAccounts: AccountWithSubAccounts[];
+  parentAccount: AccountWithSubAccounts | null;
+}
 
 // interface OrgType {
 //   name: string;
@@ -244,8 +248,6 @@ type AccountMinimal = Omit<
 //     subCategory: ["Interest Income", "Dividend Income"],
 //   },
 // ];
-
- 
 
 // interface ProjectType {
 //   id: string;

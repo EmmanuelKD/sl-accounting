@@ -6,17 +6,21 @@ import {
   Box,
   Divider,
   Drawer,
+  FormControl,
   IconButton,
+  InputLabel,
+  MenuItem,
+  Select,
+  SelectChangeEvent,
   Skeleton,
   Stack,
-  SvgIcon,
-  Typography,
+  SvgIcon
 } from "@mui/material";
+import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { items } from "./config";
 import { SideNavItem } from "./side-nav-item";
-import { useSession } from "next-auth/react";
 
 const SIDE_NAV_WIDTH = 270;
 const SIDE_NAV_COLLAPSED_WIDTH = 73; // icon size + padding + border right
@@ -189,6 +193,8 @@ export const SideNav = (props: SideNavPropTypes) => {
                 color: "neutral.600",
                 p: (th) => th.spacing(1),
                 borderRadius: 1,
+                width: '100%',
+                flexWrap: 'wrap',
               }}
             >
               {!session?.user ? (
@@ -212,12 +218,14 @@ export const SideNav = (props: SideNavPropTypes) => {
                   // sx={{ width: 80, height: 80 }}
                 />
               )}
+
               {!session?.user ? (
                 <Skeleton variant="text" width={100} height={20} />
               ) : (
-                <Typography variant="h6">
-                  {!session?.user.name ?? "ADMIN"}
-                </Typography>
+                <SelectWorkspace />
+                // <Typography variant="h6">
+                //   {session?.user.name ?? "ADMIN"}
+                // </Typography>
               )}
             </Stack>
 
@@ -241,3 +249,73 @@ export const SideNav = (props: SideNavPropTypes) => {
     </Drawer>
   );
 };
+
+function SelectWorkspace() {
+  const { data: session, update } = useSession();
+  const [currentWorkspace, setcurrentWorkspace] = useState("");
+
+  useEffect(() => {
+    // Set initial selected workspace from session or first workspace
+    if (session)
+      if ((session?.user?.workspaces?.length ?? 0) > 0) {
+        const initialWorkspace =
+          session.user.currentWorkspace || session.user.workspaces[0].id;
+        setcurrentWorkspace(initialWorkspace);
+      }
+  }, [session]);
+
+  const handleChange = async (event: SelectChangeEvent) => {
+    const workspaceId = event.target.value;
+    setcurrentWorkspace(workspaceId);
+
+    // Update session with selected workspace
+    await update({
+      ...session,
+      user: {
+        ...session?.user,
+        currentWorkspace: workspaceId,
+      },
+    });
+  };
+
+  return (
+    <FormControl 
+      variant="standard" 
+      sx={{ 
+        minWidth: 100,
+        maxWidth: '100%',
+        m: 1,
+        '& .MuiSelect-select': {
+          maxWidth: '150px',
+          textOverflow: 'ellipsis',
+          overflow: 'hidden',
+          whiteSpace: 'nowrap'
+        }
+      }}
+    >
+      <InputLabel id="workspace-select-label">Workspace</InputLabel>
+      <Select
+        labelId="workspace-select-label"
+        id="workspace-select"
+        value={currentWorkspace}
+        onChange={handleChange}
+        label="Workspace"
+      >
+        {session?.user?.workspaces?.map((workspace) => (
+          <MenuItem 
+            key={workspace.id} 
+            value={workspace.id}
+            sx={{
+              maxWidth: '250px',
+              textOverflow: 'ellipsis',
+              overflow: 'hidden',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {workspace.name}
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
+  );
+}

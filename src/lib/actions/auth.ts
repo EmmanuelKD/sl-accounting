@@ -1,9 +1,8 @@
 "use server";
 import { signIn, signOut } from "@/auth";
-import UserManagementModule from "@/module/UserManagementModule";
-import { switchPath } from "@/utils/routing";
+ import { switchPath } from "@/utils/routing";
 import { User, Workspace } from "@prisma/client";
-
+import * as um from "@/module/UserManagementModule";
 export async function authenticate({
   email,
   password,
@@ -13,7 +12,7 @@ export async function authenticate({
   origin: string;
 }) {
   // try {
-  const um = new UserManagementModule();
+  
   const res = await um.loginUser(email as string, password as string);
 
   const _callback = switchPath(res.data.user.role, "");
@@ -36,8 +35,7 @@ export async function createUserAction(
   workspaces: Workspace[],
   origin: string
 ) {
-  const um = new UserManagementModule();
-  // let bm = new BusinessModule();
+   // let bm = new BusinessModule();
   // added name to user module
 console.log(origin)
   const res = await um.registerUser(
@@ -65,7 +63,7 @@ console.log(origin)
   return null;
 }
 export async function deleteUserAction(uid: string) {
-  const um = new UserManagementModule();
+  
   return await um.deleteUser(uid);
 }
 
@@ -78,7 +76,7 @@ export async function updateUsersProfilePhotoAction(
   message: string;
   data: User;
 }> {
-  const um = new UserManagementModule();
+  
   return um.updateUserPhoto(uid, imgUrl);
 }
 
@@ -90,12 +88,12 @@ export async function updateUsersProfileAction(
   message: string;
   data: User;
 }> {
-  const um = new UserManagementModule();
+  
   return um.updateUser(user.id, user.name, user.email, user.role,user.workspaces);
 }
 type UserWithWorkspaces = User & { workspaces: Workspace[] };
 export async function getAllUsersAction(): Promise<UserWithWorkspaces[]> {
-  const um = new UserManagementModule();
+  
   return await um.getUsers();
 }
 
@@ -108,7 +106,7 @@ export async function updateUsersPassword(
   message: string;
   data: User;
 }> {
-  const um = new UserManagementModule();
+  
   return um.updateUserPassword(uid, password);
 }
 
@@ -116,6 +114,6 @@ export async function logout() {
   try {
     await signOut();
   } catch (e) {
-    alert(`${JSON.stringify(e)}`);
+    console.log(`${JSON.stringify(e)}`);
   }
 }

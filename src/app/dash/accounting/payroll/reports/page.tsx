@@ -1,24 +1,44 @@
-import React, { useState } from 'react';
-import { Typography, Box, FormControl, InputLabel, Select, MenuItem, Button, Grid } from '@mui/material';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import Layout from '../components/Layout';
+import React, { useState } from "react";
+import {
+  Typography,
+  Box,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Button,
+  Grid,
+} from "@mui/material";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import Layout from "../components/Layout";
 
 const data = [
-  { month: 'Jan', payroll: 400000 },
-  { month: 'Feb', payroll: 420000 },
-  { month: 'Mar', payroll: 430000 },
-  { month: 'Apr', payroll: 450000 },
-  { month: 'May', payroll: 460000 },
-  { month: 'Jun', payroll: 470000 },
+  { month: "Jan", payroll: 400000 },
+  { month: "Feb", payroll: 420000 },
+  { month: "Mar", payroll: 430000 },
+  { month: "Apr", payroll: 450000 },
+  { month: "May", payroll: 460000 },
+  { month: "Jun", payroll: 470000 },
 ];
 
 export default function Reports() {
-  const [department, setDepartment] = useState('');
-  const [year, setYear] = useState('2023');
+  const [department, setDepartment] = useState("");
+  const [year, setYear] = useState("2023");
 
-  const handleExport = (format: 'csv' | 'pdf') => {
+  const handleExport = (format: "csv" | "pdf") => {
     // Implement export logic here
-    console.log(`Exporting ${format} report for ${department} department in ${year}`);
+    console.log(
+      `Exporting ${format} report for ${department} department in ${year}`
+    );
   };
 
   return (
@@ -57,11 +77,11 @@ export default function Reports() {
           </FormControl>
         </Grid>
         <Grid item xs={12} md={4}>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button variant="contained" onClick={() => handleExport('csv')}>
+          <Box sx={{ display: "flex", gap: 2 }}>
+            <Button variant="contained" onClick={() => handleExport("csv")}>
               Export CSV
             </Button>
-            <Button variant="contained" onClick={() => handleExport('pdf')}>
+            <Button variant="contained" onClick={() => handleExport("pdf")}>
               Export PDF
             </Button>
           </Box>
@@ -83,7 +103,12 @@ export default function Reports() {
             <YAxis />
             <Tooltip />
             <Legend />
-            <Line type="monotone" dataKey="payroll" stroke="#8884d8" activeDot={{ r: 8 }} />
+            <Line
+              type="monotone"
+              dataKey="payroll"
+              stroke="#8884d8"
+              activeDot={{ r: 8 }}
+            />
           </LineChart>
         </ResponsiveContainer>
       </Box>

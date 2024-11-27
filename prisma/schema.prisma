@@ -7,26 +7,34 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+}
+
 //Accounting
 model Account {
-  id              String          @id @default(uuid())
-  name            String
-  number          String          @unique
-  type            AccountType
-  balance         Float           @default(0.0)
-  status          AccountStatus   @default(ACTIVE)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  transactions    Transaction[]
-  parentAccount   Account?        @relation("SubAccounts", fields: [parentAccountId], references: [id])
-  parentAccountId String?
-  subAccounts     Account[]       @relation("SubAccounts")
+  id               String               @id @default(uuid())
+  name             String
+  number           String               @unique
+  type             AccountType
+  balance          Float                @default(0.0)
+  status           AccountStatus        @default(ACTIVE)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  transactions     Transaction[]
+  parentAccount    Account?             @relation("SubAccounts", fields: [parentAccountId], references: [id])
+  parentAccountId  String?
+  subAccounts      Account[]            @relation("SubAccounts")
   // journalEntries  JournalEntry[]
-  workspace       Workspace       @relation(fields: [workspaceId], references: [id])
-  workspaceId     String
-  Reimbursement   Reimbursement[]
-  InventoryItem   InventoryItem[]
+  workspace        Workspace            @relation(fields: [workspaceId], references: [id])
+  workspaceId      String
+  Reimbursement    Reimbursement[]
+  InventoryItem    InventoryItem[]
+  linkedPayable    AccountsPayable[]
+  linkedRecievable AccountsReceivable[]
 }
+
 
 model JournalEntry {
   id          String   @id @default(uuid())
@@ -47,23 +55,43 @@ model JournalEntry {
   Reimbursement Reimbursement[] // this is a another form of transactino but is more cartigorized
 }
 
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+  CONTRA_ASSET
+}
+
+// ACCOUNT_PAYABLE
+// ACCOUNT_RECIEVEABLE
+// GENERAL_ACCOUNT
+
 //same as LineItem
 model Transaction {
-  id                   String          @id @default(uuid())
-  amount               Float
-  type                 TransactionType
-  createdAt            DateTime        @default(now())
-  updatedAt            DateTime        @updatedAt
-  accountId            String
+  id          String          @id @default(uuid())
+  amount      Float
+  type        TransactionType
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  accountType AccountType
+
   note                 String
-  relatedTransactionId String?         @unique // Optional field for related transaction
-  account              Account         @relation(fields: [accountId], references: [id])
-  journalEntry         JournalEntry    @relation(fields: [journalEntryId], references: [id])
-  journalEntryId       String
-  workspace            Workspace       @relation(fields: [workspaceId], references: [id])
-  workspaceId          String
-  Item                 InventoryItem?  @relation(fields: [itemId], references: [id])
-  itemId               String?
+  relatedTransactionId String? @unique // Optional field for related transaction
+
+  // accountPayableId String?
+  // accountPayable   AccountsPayable? @relation(fields: [accountPayableId], references: [id])
+
+  account   Account? @relation(fields: [accountId], references: [id])
+  accountId String?
+
+  journalEntry   JournalEntry   @relation(fields: [journalEntryId], references: [id])
+  journalEntryId String
+  workspace      Workspace      @relation(fields: [workspaceId], references: [id])
+  workspaceId    String
+  Item           InventoryItem? @relation(fields: [itemId], references: [id])
+  itemId         String?
 }
 
 model Period {
@@ -77,20 +105,6 @@ model Period {
   workspaceId    String
   // Relations
   journalEntries JournalEntry[] // Journal entries that are part of this period
-}
-
-enum AccountType {
-  ASSET
-  LIABILITY
-  EQUITY
-  REVENUE
-  EXPENSE
-  CONTRA_ASSET
-}
-
-enum AccountStatus {
-  ACTIVE
-  INACTIVE
 }
 
 enum TransactionType {
@@ -195,18 +209,16 @@ model Customer {
 }
 
 model AccountsReceivable {
-  id             String          @id @default(uuid())
-  balance        Float           @default(0.0) // Tracks the total outstanding balance
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  customerId     String
-  customer       Customer        @relation(fields: [customerId], references: [id])
-  workspace      Workspace       @relation(fields: [workspaceId], references: [id])
-  workspaceId    String
-  // Optional relation to detailed entries for transactions on AR
-  arTransactions ARTransaction[]
-  Invoice        Invoice[]
-  Payment        Payment[]
+  id         String   @id @default(uuid())
+  account    Account  @relation(fields: [accountId], references: [id])
+  accountId  String
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  Invoice     Invoice[]
+  Payment     Payment[]
+  Workspace   Workspace? @relation(fields: [workspaceId], references: [id])
+  workspaceId String?
 }
 
 model Invoice {
@@ -268,17 +280,17 @@ enum InvoiceStatus {
 //   BANK_TRANSFER
 // }
 
-model ARTransaction {
-  id                   String             @id @default(uuid())
-  type                 ARTransactionType // PAYMENT, INVOICE, REFUND, ADJUSTMENT
-  amount               Float // Amount that affects the AR
-  transactionDate      DateTime           @default(now())
-  description          String? // Optional description
-  accountsReceivableId String // Link to the associated AR
-  accountsReceivable   AccountsReceivable @relation(fields: [accountsReceivableId], references: [id])
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
-}
+// model ARTransaction {
+//   id                   String             @id @default(uuid())
+//   type                 ARTransactionType // PAYMENT, INVOICE, REFUND, ADJUSTMENT
+//   amount               Float // Amount that affects the AR
+//   transactionDate      DateTime           @default(now())
+//   description          String? // Optional description
+//   accountsReceivableId String // Link to the associated AR
+//   accountsReceivable   AccountsReceivable @relation(fields: [accountsReceivableId], references: [id])
+//   createdAt            DateTime           @default(now())
+//   updatedAt            DateTime           @updatedAt
+// }
 
 enum ARTransactionType {
   INVOICE // When an invoice is issued
@@ -669,35 +681,18 @@ enum AddressType {
 
 //// Account payable
 model AccountsPayable {
-  id        String   @id @default(uuid())
-  balance   Float    @default(0.0) // Tracks the total outstanding balance
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  id        String  @id @default(uuid())
+  account   Account @relation(fields: [accountId], references: [id])
+  accountId String
   // Relation to Vendor
-  vendorId String
-  vendor   Vendor @relation(fields: [vendorId], references: [id])
+  vendorId  String
+  vendor    Vendor  @relation(fields: [vendorId], references: [id])
 
   // Relation to Workspace
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
 
   // Related transactions and entries for AP
-  apTransactions APTransaction[]
-  Invoice        Invoice[]
-  Payment        Payment[]
-}
-
-model APTransaction {
-  id                String          @id @default(uuid())
-  accountsPayableId String
-  accountsPayable   AccountsPayable @relation(fields: [accountsPayableId], references: [id])
-
-  transactionDate DateTime        @default(now())
-  description     String?
-  amount          Float
-  type            TransactionType // ENUM: CREDIT, DEBIT, etc.
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  Invoice Invoice[]
+  Payment Payment[]
 }

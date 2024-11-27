@@ -1,8 +1,7 @@
-import { ReactNode, useCallback, useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
-import PropTypes from 'prop-types';
 import { useMediaQuery } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import { usePathname } from 'next/navigation';
+import { ReactNode, useCallback, useEffect, useState } from 'react';
 import { Footer } from './footer';
 import { SideNav } from './side-nav';
 import { TopNav } from './top-nav';
@@ -48,7 +47,7 @@ type LayoutPropTypes = {
 };
 export const Layout = (props:LayoutPropTypes) => {
   const { children } = props;
-  // @ts-ignore
+  // @ts-expect-error  unknown
   const mdDown = useMediaQuery((theme) => theme.breakpoints.down('md'));
   const mobileNav = useMobileNav();
 

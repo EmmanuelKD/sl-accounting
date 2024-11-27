@@ -1,16 +1,18 @@
 import { paths } from "@/paths";
-import { Assessment, Work } from "@mui/icons-material";
+import {
+  Assessment,
+  Person2,
+  Report,
+  Settings,
+  Work,
+} from "@mui/icons-material";
 import { SvgIcon } from "@mui/material";
 
 export const items = [
   {
     title: "Dashboard",
     path: paths.dashboard.index,
-    icon: (
-      <SvgIcon>
-        <Assessment />
-      </SvgIcon>
-    ),
+    icon: <Assessment />,
 
     items: [
       {
@@ -29,7 +31,6 @@ export const items = [
       </SvgIcon>
     ),
     items: [
-      
       {
         title: "General Ledger",
         path: paths.dashboard.accounting.general_ledger.index,
@@ -64,11 +65,7 @@ export const items = [
   {
     title: "Human Resources",
     path: paths.dashboard.hr.index,
-    icon: (
-      <SvgIcon>
-        <Work />
-      </SvgIcon>
-    ),
+    icon:   <Person2 />,
     items: [
       {
         title: "Employees",
@@ -107,11 +104,7 @@ export const items = [
   {
     title: "Reporting & Analytics",
     path: paths.dashboard.reporting_analytics.index,
-    icon: (
-      <SvgIcon>
-        <Work />
-      </SvgIcon>
-    ),
+    icon: <Report />,
     items: [
       {
         title: "Reports",
@@ -124,13 +117,9 @@ export const items = [
     ],
   },
   {
-    title: "Settings & User Management",
+    title: "Settings & User Mgnt.",
     path: paths.dashboard.settings.index,
-    icon: (
-      <SvgIcon>
-        <Work />
-      </SvgIcon>
-    ),
+    icon: <Settings />,
     items: [
       {
         title: "User Management",

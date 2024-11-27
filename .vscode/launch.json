@@ -5,7 +5,7 @@
         "name": "Next.js: debug server-side",
         "type": "node-terminal",
         "request": "launch",
-        "command": "nvm use 18 && npm run dev",
+        "command": "nvm use && npm run dev",
 
       },
       {
@@ -18,7 +18,7 @@
         "name": "Next.js: debug full stack",
         "type": "node-terminal",
         "request": "launch",
-        "command": "nvm use 18 && npm run dev",
+        "command": "nvm use && npm run dev",
         "serverReadyAction": {
           "pattern": "started server on .+, url: (https?://.+)",
           "uriFormat": "%s",
